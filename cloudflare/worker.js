@@ -1,6 +1,7 @@
+const GOAL=13,DURATION=15000,AIM_SPEED=220,MIN_SHOT_INTERVAL=350;
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
 const positions={A:'left',B:'center',C:'right'};
-const snapshot=(s,now)=>({score:s.score,seq:s.seq,phase:s.phase,target:s.target,startedAt:s.startedAt,deadline:s.startedAt+60000,serverNow:now});
+const snapshot=(s,now)=>({score:s.score,seq:s.seq,phase:s.phase,target:s.target,startedAt:s.startedAt,deadline:s.startedAt+DURATION,serverNow:now});
 
 export default {
  async fetch(request,env){
@@ -62,7 +63,7 @@ export class GameSession {
   }
   const s=await store.get('game');if(!s||now>s.startedAt+600000)return json({error:'Cette partie a expiré. Relance le défi.'},410);
   if(path==='/reward'){
-   if(s.score<5)return json({error:'Marque cinq paniers pour obtenir ton indice.'},403);
+   if(s.score<GOAL)return json({error:'Marque treize paniers pour obtenir ton indice.'},403);
    let rewards;try{rewards=JSON.parse(this.env.REWARDS_JSON);}catch{return json({error:'Indice indisponible.'},503);}
    return json({reward:rewards[s.ref],position:positions[s.ref]});
   }
@@ -71,10 +72,10 @@ export class GameSession {
   // Réessayer un appel ne peut jamais compter deux fois le même tir.
   if(body.seq===s.seq-1&&s.lastResponse)return json(s.lastResponse);
   if(body.seq!==s.seq)return json({error:'Tir déjà traité. Relance le défi.'},409);
-  if(now>=s.startedAt+60000)return json({error:'Le temps est écoulé.'},410);
-  if(s.score>=5)return json({error:'Défi déjà terminé.'},409);
-  if(s.lastShot&&now-s.lastShot<1100)return json({error:'Attends la fin du tir.'},429);
-  const aim=.5+.44*Math.sin((now-s.startedAt)/570+s.phase),hit=Math.abs(aim-s.target)<=.095;
+  if(now>=s.startedAt+DURATION)return json({error:'Le temps est écoulé.'},410);
+  if(s.score>=GOAL)return json({error:'Défi déjà terminé.'},409);
+  if(s.lastShot&&now-s.lastShot<MIN_SHOT_INTERVAL)return json({error:'Attends la fin du tir.'},429);
+  const aim=.5+.44*Math.sin((now-s.startedAt)/AIM_SPEED+s.phase),hit=Math.abs(aim-s.target)<=.095;
   if(hit)s.score++;
   s.lastShot=now;s.seq++;
   if(hit)s.target=.22+Math.random()*.56;

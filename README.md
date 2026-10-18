@@ -4,9 +4,10 @@ Un seul site pour le Salon de l’Épargne : le mini-jeu de basket, les trois pa
 
 ## Où en est le projet ?
 
-- Le jeu se présente verticalement, avec le pingouin de dos face au panier : 5 paniers en 60 secondes.
+- Le jeu se présente verticalement, avec le pingouin de dos face au panier : 13 paniers en 15 secondes.
 - Sans Cloudflare configuré, le jeu affiche clairement « Mode entraînement » et ne révèle aucun indice.
-- Le clavier du coffre fonctionne sans Cloudflare, vérifie au sixième chiffre, puis lance animation et son activable.
+- Le clavier du coffre fonctionne sans Cloudflare, vérifie au sixième chiffre, puis lance animation et son activable. Deux combinaisons incorrectes bloquent le clavier ; l’équipe peut réinitialiser les essais.
+- Le ballon est tenu dans la nageoire droite du pingouin vu de dos. Les tirs et paniers ont des bruitages légers, activés au démarrage du défi si le navigateur le permet ; le bouton de son permet de les couper.
 - Le mode hors connexion concerne uniquement le clavier. Attendre le message « Hors connexion prêt », puis tester en mode avion sur le téléphone du salon. Un navigateur peut vider ses données : refaire le test avant l’événement.
 - Les écrans d’indices, « Pas de chance » et le clavier utilisent le fichier original du pingouin Wave fourni par l’utilisateur, sans retouche ni déformation. Les PNG historiques de mise en page ne sont pas inclus, car ils doivent être fournis à nouveau.
 - Le pingouin de dos du jeu est une adaptation de cette référence, et non une vue officielle fournie. Le terrain reste dessiné par le jeu.
@@ -52,11 +53,11 @@ Le guide détaillé pour l’accompagnement se trouve dans [cloudflare/INSTALLAT
 4. Tester en mode avion : recharger la page puis saisir une combinaison.
 5. L’équipe ouvre le coffre à la main. Le bouton « Équipe · Nouvelle tentative » prépare le prochain essai.
 
-Le verrouillage est local à ce téléphone, pas un verrouillage global de l’événement.
+Chaque participant dispose de deux combinaisons complètes. Après deux erreurs, le clavier se bloque. Le compteur et la victoire restent enregistrés sur ce navigateur après rechargement. L’équipe peut remettre deux essais à disposition avec le bouton de réinitialisation. Effacer les données du navigateur supprime ce compteur local. Le verrouillage est local à ce téléphone, pas un verrouillage global de l’événement.
 
 ## Protection et limites
 
-Les indices sont conservés dans les secrets Cloudflare, et le serveur compte les tirs avec un délai minimal et une limite de 60 secondes. Un joueur ne peut pas simplement envoyer « score : 5 ». La visée peut toutefois être automatisée et les références A/B/C sont modifiables : ce système vise une protection légère, pas une compétition anti-triche.
+Les indices sont conservés dans les secrets Cloudflare, et le serveur compte les tirs avec un délai minimal et une limite de 15 secondes. Un joueur ne peut pas simplement envoyer « score : 13 ». La visée peut toutefois être automatisée et les références A/B/C sont modifiables : ce système vise une protection légère, pas une compétition anti-triche.
 
 Le clavier est volontairement autonome. L’empreinte de la combinaison évite une lecture immédiate du code, mais elle peut être testée par recherche exhaustive. Utiliser l’appareil surveillé par l’équipe. L’animation n’actionne aucune serrure physique.
 

@@ -10,6 +10,24 @@ window.WaveUI = (() => {
     o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+duration+.02);
   }
   function win(){[523,659,784,1047].forEach((f,i)=>tone(f,.4,.09,i*.16));}
+  function disableSound(){sound=false;}
+  function isSoundEnabled(){return sound&&audio?.state==='running';}
+  function shootSound(){
+    if(!isSoundEnabled())return;
+    const o=audio.createOscillator(),g=audio.createGain(),t=audio.currentTime;
+    o.type='triangle';o.frequency.setValueAtTime(380,t);o.frequency.exponentialRampToValueAtTime(150,t+.09);
+    g.gain.setValueAtTime(.025,t);g.gain.exponentialRampToValueAtTime(.001,t+.1);
+    o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+.11);
+  }
+  function basketSound(){
+    if(!isSoundEnabled())return;
+    const duration=.16,buffer=audio.createBuffer(1,Math.ceil(audio.sampleRate*duration),audio.sampleRate),data=buffer.getChannelData(0);
+    for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*(1-i/data.length);
+    const source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain();
+    source.buffer=buffer;filter.type='bandpass';filter.frequency.value=1900;filter.Q.value=.7;gain.gain.value=.035;
+    source.connect(filter);filter.connect(gain);gain.connect(audio.destination);source.start();tone(880,.08,.018,.06);
+  }
+  function missSound(){tone(130,.1,.025);}
   function confetti(){
     if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
     const c=document.createElement('canvas');c.className='celebration';c.setAttribute('aria-hidden','true');document.body.append(c);
@@ -18,5 +36,5 @@ window.WaveUI = (() => {
     let last=start;
     function frame(now){const dt=Math.min((now-last)/1000,.05);last=now;ctx.clearRect(0,0,c.width,c.height);for(const p of particles){p.y+=p.v*dt;p.x+=Math.sin(now/500+p.r)*18*dt;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r+now/700);ctx.fillStyle=p.color;ctx.fillRect(-p.w/2,0,p.w,p.w*.6);ctx.restore();}if(now-start<5000)requestAnimationFrame(frame);else c.remove();}requestAnimationFrame(frame);
   }
-  return {enableSound,tone,win,confetti};
+  return {enableSound,disableSound,isSoundEnabled,shootSound,basketSound,missSound,tone,win,confetti};
 })();

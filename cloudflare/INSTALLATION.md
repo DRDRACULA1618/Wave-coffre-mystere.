@@ -34,8 +34,8 @@ Saisir le JSON privé à la demande de Wrangler, puis renseigner uniquement l’
 - Une session est liée à une référence validée A, B ou C.
 - Le score et le chronomètre sont gérés dans une session Durable Object.
 - Les requêtes de tir dupliquées ne comptent pas deux fois.
-- Les tirs sont espacés d’au moins 1,1 seconde.
-- Un indice n’est renvoyé qu’après cinq paniers enregistrés par le serveur.
+- Les tirs sont espacés d’au moins 0,35 seconde.
+- Un indice n’est renvoyé qu’après treize paniers enregistrés par le serveur.
 - La session est effacée après dix minutes, les compteurs réseau après une heure.
 - La limite de création est 600 sessions par heure par adresse réseau pour permettre une connexion partagée au salon. Elle ne protège pas contre une attaque distribuée.
 - Aucun suivi des personnes, formulaire d’inscription ou classement n’est ajouté.
