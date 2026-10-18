@@ -1,1 +1,1 @@
-{"name":"Le coffre mystère Wave","short_name":"Coffre Wave","start_url":"./","scope":"./","display":"standalone","background_color":"#00bde5","theme_color":"#00bde5","lang":"fr","icons":[{"src":"../assets/pingouin-wave-original.png","sizes":"479x687","type":"image/png","purpose":"any"}]}
+{"name":"Le coffre mystère Wave","short_name":"Coffre Wave","start_url":"./","scope":"./","display":"standalone","background_color":"#00bde5","theme_color":"#00bde5","lang":"fr","icons":[{"src":"../assets/pingouin-wave-original.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}

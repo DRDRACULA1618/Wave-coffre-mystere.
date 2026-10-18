@@ -13,7 +13,8 @@ Un seul site pour le Salon de l’Épargne : le mini-jeu de basket, les trois pa
 
 ## Visuels du pingouin
 
-- `assets/pingouin-wave-original.png` : copie exacte du fichier utilisateur, fond bleu compris.
+- `assets/pingouin-wave-original.png` : copie exacte du dernier PNG transparent fourni par l’utilisateur.
+- `assets/pingouin-wave-original.svg` : cadre SVG qui incorpore ce PNG sans modifier ses pixels et utilise une fenêtre ajustée à la zone visible ; les grandes marges transparentes ne réduisent donc pas la taille du personnage à l’écran.
 - `assets/pingouin-wave-dos.png` : adaptation vue de dos sur fond transparent, créée avec l’outil de génération d’images intégré. Consigne : silhouette noire simple, pied orange en demi-cercle, nageoire levée à droite, aucun visage ni ventre blanc, sans décor, dans le style de la référence.
 - Les proportions des deux fichiers sont conservées à l’affichage. La vue de dos est une interprétation, sa fidélité à une vue officielle de dos ne peut pas être garantie.
 
