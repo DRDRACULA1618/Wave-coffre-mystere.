@@ -80,3 +80,10 @@ Le jeu utilise la hauteur et la largeur de `visualViewport` quand elles sont dis
 ## Logo Wave
 
 Toutes les pages utilisent le fichier de logo fourni par l’utilisateur, pingouin et mot Wave réunis. `assets/logo-wave.png` est une copie exacte de ce fichier ; `assets/logo-wave.svg` l’incorpore sans retouche, avec un cadrage qui retire uniquement les marges transparentes à l’affichage. Les proportions et couleurs d’origine sont conservées. Le logo est également mis en cache avec le clavier hors connexion.
+
+
+## Liens neutres et compatibilité
+
+Les quatre QR utilisent désormais des chemins `/s/<identifiant>/` de même longueur. Ces quatre pages HTML sont identiques : aucun chiffre, ordre d’indice ou résultat propre au QR n’est écrit dans leur URL ou dans leur HTML. La résolution `/resolve` et la création `/session` se font en POST auprès de Cloudflare. Le service choisit la référence en fonction du jeton ; une référence fournie en même temps ne peut pas la modifier. Cette présentation évite les spoilers dans la barre d’adresse, sans transformer les liens publics en secrets.
+
+Les anciens `/jeu/?id=A`, `B`, `C` et `/pas-de-chance/` restent présents et demandent au serveur leur adresse neutre, puis utilisent `location.replace` pour ne pas conserver une étape supplémentaire dans l’historique. L’accueil et `/coffre/` restent disponibles. Ne pas supprimer les anciens chemins : des QR peuvent déjà être imprimés.

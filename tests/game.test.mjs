@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-function game(search='?id=A',apiUrl='',fetchFn){
+function game(search='?id=A',apiUrl='',fetchFn,pathname='/jeu/'){
  const elements=new Map(),dots=Array.from({length:13},()=>({classList:{toggle(){}}}));let time=1900000000000,frame;
  const context2d=new Proxy({createLinearGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:()=>{},set:(o,k,v)=>(o[k]=v,true)});
  const get=id=>{if(!elements.has(id))elements.set(id,{textContent:'',hidden:false,disabled:false,style:{},dataset:{},classList:{toggle(){}},getContext:()=>context2d});return elements.get(id);};
@@ -11,7 +11,7 @@ function game(search='?id=A',apiUrl='',fetchFn){
  const FakeDate=class extends Date{static now(){return time;}};
  const math=Object.create(Math);math.random=()=>0;
  class LoadedImage{constructor(){this.naturalWidth=1046;this.naturalHeight=1503;}set src(value){this.url=value;this.onload?.();}}
- const sandbox={Image:LoadedImage,document:{getElementById:get,querySelectorAll:()=>dots,addEventListener(){}},location:{search},window:{WAVE_CONFIG:{apiUrl}},URLSearchParams,performance:{now:()=>time},Date:FakeDate,Math:math,AbortSignal,fetch:fetchFn,requestAnimationFrame:f=>frame=f,WaveUI:{tone(){},shootSound(){},basketSound(){},missSound(){},isSoundEnabled:()=>true,disableSound(){},win(){},confetti(){},enableSound:async()=>true}};
+ const sandbox={Image:LoadedImage,document:{getElementById:get,querySelectorAll:()=>dots,addEventListener(){},body:{classList:{remove(){}}}},location:{search,pathname},window:{WAVE_CONFIG:{apiUrl}},URLSearchParams,performance:{now:()=>time},Date:FakeDate,Math:math,AbortSignal,fetch:fetchFn,requestAnimationFrame:f=>frame=f,WaveUI:{tone(){},shootSound(){},basketSound(){},missSound(){},isSoundEnabled:()=>true,disableSound(){},win(){},confetti(){},enableSound:async()=>true}};
  vm.runInNewContext(fs.readFileSync(new URL('../jeu/game.js',import.meta.url),'utf8'),sandbox);
  return {get,step(ms){time+=ms;frame(time);},advance(ms){time+=ms;},time:()=>time};
 }
@@ -40,4 +40,22 @@ test('mode connecté : la réponse du serveur décide du score et du résultat',
  const g=game('?id=C','https://service.test',fetchFn);await g.get('start').onclick();assert.equal(calls[0].body.ref,'C');
  for(let n=0;n<13;n++){serverTime=g.time();await g.get('shoot').onclick();g.step(350);g.step(50);}
  await new Promise(r=>setTimeout(r,0));assert.equal(g.get('score').textContent,'13 / 13');assert.equal(g.get('reward').textContent,'42');assert.equal(g.get('result').dataset.position,'right');assert.equal(calls.filter(c=>c.url.endsWith('/reward')).length,1);assert.ok(calls.filter(c=>c.url.endsWith('/shot')).every(c=>!('score' in c.body)));
+});
+test('un lien neutre attend sa résolution et lance une partie avec son jeton, même si id est modifié',async()=>{
+ const calls=[];
+ const fetchFn=async(url,options)=>{calls.push({url,body:JSON.parse(options.body)});if(url.endsWith('/resolve'))return Response.json({kind:'game',token:'tfn3j5u4'});return Response.json({session:'test',score:0,seq:0,phase:0,target:.5,startedAt:1900000000000,deadline:1900000015000,serverNow:1900000000000});};
+ const g=game('?id=C','https://service.test',fetchFn,'/Wave-coffre-mystere./s/tfn3j5u4/');
+ assert.equal(g.get('start').disabled,true);await new Promise(r=>setTimeout(r,0));
+ assert.equal(g.get('start').disabled,false);assert.equal(g.get('gameCard').hidden,false);assert.equal(g.get('loadingCard').hidden,true);
+ await g.get('start').onclick();assert.deepEqual(calls.map(c=>c.body),[{token:'tfn3j5u4'},{token:'tfn3j5u4'}]);
+ assert.equal(calls[1].url,'https://service.test/session');
+});
+test('un QR sans indice affiche le résultat dans la même page, sans créer de session',async()=>{
+ const calls=[];const g=game('','https://service.test',async(url)=>{calls.push(url);return Response.json({kind:'empty',token:'4ubsj88k'});},'/s/4ubsj88k/');
+ await new Promise(r=>setTimeout(r,0));assert.equal(g.get('emptyCard').hidden,false);assert.equal(g.get('gameCard').hidden,true);g.step(1);assert.equal(calls.length,1);
+});
+test('la résolution interrompue peut être relancée sans démarrer de chronomètre',async()=>{
+ let attempts=0;const g=game('','https://service.test',async()=>{if(!attempts++)throw Error('Hors ligne');return Response.json({kind:'game',token:'tfn3j5u4'});},'/s/tfn3j5u4/');
+ await new Promise(r=>setTimeout(r,0));assert.match(g.get('coverTitle').textContent,/indisponible/);assert.equal(g.get('start').disabled,false);
+ await g.get('start').onclick();assert.equal(attempts,2);assert.equal(g.get('start').textContent,'Commencer le défi');assert.equal(g.get('shoot').disabled,true);
 });

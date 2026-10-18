@@ -2,12 +2,14 @@
   'use strict';
   const $=id=>document.getElementById(id),canvas=$('court'),ctx=canvas.getContext('2d');ctx.scale(2,2);
   const params=new URLSearchParams(location.search),ref=params.get('id');
+  const token=(location.pathname||'').match(/\/s\/([a-z0-9]{8})\/?$/)?.[1]||'';
   const api=(window.WAVE_CONFIG?.apiUrl||'').replace(/\/$/,'');
   // Vue de dos : la nageoire droite est à droite de l’écran.
   const BALL_START={x:246,y:278,r:16};
   const GAME={goal:13,duration:15000,aimSpeed:300,hitRadius:.25,shotCooldown:280,flightDuration:200,flightEnd:280};
   let state='ready',score=0,phase=0,target=.5,epoch=0,deadline=0,flight=null,lastShot=-Infinity,session='',seq=0,clockOffset=0,pending=false;
-  const practice=!api,valid=['A','B','C'].includes(ref),now=()=>Date.now()+clockOffset;
+  const practice=!api&&!token,now=()=>Date.now()+clockOffset;
+  let valid=!token&&['A','B','C'].includes(ref),resolved=!token;
   let soundOptOut=false,lastCountdown=-1;
   $('mode').textContent=!valid?'Scanne un QR code du jeu pour commencer.':practice?'Entraînement · Indices à activer':'';
   $('start').disabled=!valid;
@@ -28,13 +30,34 @@
   function stats(){const s=Math.max(0,Math.ceil((deadline-now())/1000));$('score').textContent=score+' / '+GAME.goal;if(state==='playing'){$('timer').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');if(s>0&&s<=3&&s!==lastCountdown){lastCountdown=s;WaveUI.tone(620,.045,.015);}}$('timerBox').classList.toggle('urgent',state==='playing'&&s<=5);document.querySelectorAll('.progress i').forEach((d,i)=>d.classList.toggle('on',i<score));}
   function fail(title,text){state='lost';flight=null;pending=false;$('shoot').disabled=true;$('cover').hidden=false;$('coverTitle').textContent=title;$('coverText').textContent=text;$('start').textContent='Réessayer';$('start').disabled=false;}
   async function start(){
+    if(token&&!resolved){await resolveScan();return;}
     if(!mascotReady||!valid||state==='starting'||state==='playing')return;state='starting';$('start').disabled=true;$('coverText').textContent='Prépare-toi…';
     if(!soundOptOut)WaveUI.enableSound().then(ok=>{if(soundOptOut){WaveUI.disableSound();return;}$('sound').textContent=ok?'Son : activé':'Activer le son';if(!ok)soundOptOut=true;});
     try{
       if(practice){clockOffset=0;epoch=Date.now();deadline=epoch+GAME.duration;phase=Math.random()*6;target=.5;score=0;seq=0;}
-      else{const d=await request('/session',{ref});session=d.session;accept(d);}
+      else{const d=await request('/session',token?{token}:{ref});session=d.session;accept(d);}
       flight=null;lastShot=-Infinity;lastCountdown=-1;pending=false;state='playing';$('feedback').textContent='';$('cover').hidden=true;$('shoot').disabled=false;$('start').disabled=false;stats();
     }catch(e){fail('Connexion indisponible',e.message);}
+  }
+  async function resolveScan(){
+    $('start').disabled=true;
+    try{
+      if(!api)throw new Error('Le service est momentanément indisponible.');
+      const d=await request('/resolve',{token});
+      if(d.kind!=='game'&&d.kind!=='empty')throw new Error('QR code inconnu.');
+      resolved=true;$('loadingCard').hidden=true;
+      if(d.kind==='empty'){
+        state='empty';$('gameCard').hidden=true;$('emptyCard').hidden=false;
+        document.body.classList.remove('game-page');
+        return;
+      }
+      valid=true;$('gameCard').hidden=false;$('mode').textContent='';
+      $('coverTitle').textContent='À toi de jouer !';$('coverText').textContent='Touche « Tirer ! » quand le curseur est dans la grande zone bleue.';
+      $('start').textContent='Commencer le défi';$('start').disabled=!mascotReady;state='ready';
+    }catch(e){
+      $('loadingCard').hidden=true;$('gameCard').hidden=false;
+      fail('Connexion indisponible',e.message);
+    }
   }
   async function reveal(){
     $('retryReward').hidden=true;
@@ -70,6 +93,7 @@
     ctx.strokeStyle='#f28324';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(195,83,34,6,0,0,Math.PI*2);ctx.stroke();
   }
   function frame(t){
+    if(state==='empty')return;
     court(t);
     if(state==='playing'){
       if(flight&&t-flight.at>=GAME.flightEnd){const hit=flight.hit;flight=null;$('feedback').textContent=hit?'Panier ! 🏀':'Presque ! Ajuste ton timing.';if(hit)WaveUI.basketSound();else WaveUI.missSound();stats();if(score>=GAME.goal){win();}else{$('shoot').disabled=false;}}
@@ -83,4 +107,5 @@
   $('sound').onclick=async()=>{if(!soundOptOut){soundOptOut=true;WaveUI.disableSound();$('sound').textContent='Son : coupé';}else{const enabled=await WaveUI.enableSound();soundOptOut=!enabled;$('sound').textContent=enabled?'Son : activé':'Activer le son';}};
   document.addEventListener('keydown',e=>{if(e.code==='Space'&&!e.repeat&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&e.target.tagName!=='BUTTON'&&state==='playing'){e.preventDefault();shoot();}});
   requestAnimationFrame(frame);
+  if(token)resolveScan();
 })();
