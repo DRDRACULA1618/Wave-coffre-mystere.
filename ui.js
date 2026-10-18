@@ -29,12 +29,19 @@ window.WaveUI = (() => {
   }
   function missSound(){tone(130,.1,.025);}
   function confetti(){
-    if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    document.querySelector('.celebration')?.remove();
+    const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches||false;
     const c=document.createElement('canvas');c.className='celebration';c.setAttribute('aria-hidden','true');document.body.append(c);
-    c.width=innerWidth;c.height=innerHeight;const ctx=c.getContext('2d'),start=performance.now();
-    const particles=Array.from({length:95},()=>({x:Math.random()*c.width,y:-Math.random()*c.height,v:80+Math.random()*140,w:5+Math.random()*7,r:Math.random()*6,color:['#fff','#ffa532','#073750','#77edff'][Math.floor(Math.random()*4)]}));
-    let last=start;
-    function frame(now){const dt=Math.min((now-last)/1000,.05);last=now;ctx.clearRect(0,0,c.width,c.height);for(const p of particles){p.y+=p.v*dt;p.x+=Math.sin(now/500+p.r)*18*dt;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r+now/700);ctx.fillStyle=p.color;ctx.fillRect(-p.w/2,0,p.w,p.w*.6);ctx.restore();}if(now-start<5000)requestAnimationFrame(frame);else c.remove();}requestAnimationFrame(frame);
+    const width=window.visualViewport?.width||innerWidth,height=window.visualViewport?.height||innerHeight,dpr=Math.min(window.devicePixelRatio||1,2);
+    c.width=Math.round(width*dpr);c.height=Math.round(height*dpr);c.style.width=width+'px';c.style.height=height+'px';
+    const ctx=c.getContext('2d');if(!ctx){c.remove();return ()=>{};}ctx.setTransform(dpr,0,0,dpr,0,0);
+    const start=performance.now(),duration=12000;
+    const particles=Array.from({length:130},()=>({x:Math.random()*width,y:Math.random()*height,v:65+Math.random()*110,w:5+Math.random()*5,r:Math.random()*6,color:['#00a6d6','#ffab28','#f26388','#073750'][Math.floor(Math.random()*4)]}));
+    let last=start,active=true,raf,timeout;
+    function cleanup(){active=false;if(raf)cancelAnimationFrame(raf);clearTimeout(timeout);c.remove();}
+    function frame(now){if(!active)return;const dt=Math.min((now-last)/1000,.05);last=now;ctx.clearRect(0,0,width,height);for(const p of particles){if(!reduced){p.y+=p.v*dt;p.x+=Math.sin(now/500+p.r)*18*dt;if(p.y>height+10){p.y=-10;p.x=Math.random()*width;}}ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r+(reduced?0:now/700));ctx.fillStyle=p.color;ctx.fillRect(-p.w/2,0,p.w,p.w*.6);ctx.restore();}if(!reduced&&now-start<duration)raf=requestAnimationFrame(frame);else if(!reduced)cleanup();}
+    // Première image immédiate : la fête reste visible même si iOS ralentit les animations.
+    frame(start);timeout=setTimeout(cleanup,duration);return cleanup;
   }
   return {enableSound,disableSound,isSoundEnabled,shootSound,basketSound,missSound,tone,win,confetti};
 })();

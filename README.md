@@ -8,7 +8,7 @@ Un seul site pour le Salon de l’Épargne : le mini-jeu de basket, les trois pa
 - Sans Cloudflare configuré, le jeu affiche clairement « Mode entraînement » et ne révèle aucun indice.
 - Le clavier du coffre fonctionne sans Cloudflare, vérifie au sixième chiffre, puis lance animation et son activable. Deux combinaisons incorrectes bloquent le clavier ; l’équipe peut réinitialiser les essais.
 - Le ballon est tenu dans la nageoire droite du pingouin vu de dos. Les tirs et paniers ont des bruitages légers, activés au démarrage du défi si le navigateur le permet ; le bouton de son permet de les couper.
-- Le mode hors connexion concerne uniquement le clavier. Attendre le message « Hors connexion prêt », puis tester en mode avion sur le téléphone du salon. Un navigateur peut vider ses données : refaire le test avant l’événement.
+- Le mode hors connexion concerne uniquement le clavier. Après un premier chargement complet, tester en mode avion sur le téléphone du salon. Un navigateur peut vider ses données : refaire le test avant l’événement.
 - Les écrans d’indices, « Pas de chance » et le clavier utilisent le fichier original du pingouin Wave fourni par l’utilisateur, sans retouche ni déformation. Les PNG historiques de mise en page ne sont pas inclus, car ils doivent être fournis à nouveau.
 - Le pingouin de dos du jeu est une adaptation de cette référence, et non une vue officielle fournie. Le terrain reste dessiné par le jeu.
 
@@ -49,7 +49,7 @@ Le guide détaillé pour l’accompagnement se trouve dans [cloudflare/INSTALLAT
 
 1. Ouvrir `coffre/` sur iPhone ou Android avec Internet.
 2. Toucher « Activer le son » ; vérifier volume et mode silencieux.
-3. Attendre « Hors connexion prêt ».
+3. Laisser la page se charger complètement pendant quelques secondes pour préparer les ressources hors connexion.
 4. Tester en mode avion : recharger la page puis saisir une combinaison.
 5. L’équipe ouvre le coffre à la main. Le bouton « Équipe · Nouvelle tentative » prépare le prochain essai.
 
@@ -66,3 +66,7 @@ Le clavier est volontairement autonome. L’empreinte de la combinaison évite u
 Pas de dépendance pour le site. Servir les fichiers par HTTP en développement et HTTPS en production. Les tests du service sont exécutables avec `node --test tests/service.test.mjs`. Pour tester aussi le clavier, définir la variable locale `WAVE_TEST_CODE` avec la combinaison attendue, puis exécuter `node --test tests/*.test.mjs`. Ne jamais enregistrer cette variable dans un fichier suivi par Git.
 
 Références : [GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site), [Cloudflare Durable Objects](https://developers.cloudflare.com/durable-objects/get-started/), [Secrets Cloudflare](https://developers.cloudflare.com/workers/configuration/secrets/).
+
+## Affichage mobile du coffre
+
+Le clavier et la victoire utilisent la hauteur dynamique du navigateur (Safari et Android), avec une disposition compacte sur petits écrans. L’en-tête affiche uniquement « LE COFFRE MYSTÈRE ». Le cache hors connexion reste actif sans mention technique affichée. Les confettis sont dessinés immédiatement pendant douze secondes ; le réglage de réduction des animations conserve une décoration fixe.

@@ -2,3 +2,48 @@
 
 /* Proportions intactes du fichier Wave fourni. */
 .mascot{object-fit:contain}
+
+/* Coffre mobile : toute la hauteur utile de Safari, barres du navigateur exclues. */
+body.vault-page{height:100vh;height:100dvh;min-height:0;padding:max(8px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));display:flex;justify-content:center;align-items:center;overflow:auto}
+.vault-page main{height:100%;max-height:820px;min-height:0;display:flex;flex-direction:column;gap:8px}
+.vault-page header{flex:0 0 34px;margin:0 4px;min-width:0}
+.vault-page .brand{font-size:36px}
+.vault-page .event{font-size:9px;letter-spacing:1px;line-height:1.3}
+.vault-page .card{flex:1 1 auto;min-height:0;padding:14px 18px;border-radius:24px;display:flex;flex-direction:column}
+.vault-page h1{font-size:clamp(22px,6vw,28px);margin:8px 0;line-height:1.12}
+.vault-page .eyebrow{font-size:9px;line-height:1.3}
+.vault-page .intro{font-size:13px;line-height:1.3;margin:4px 0}
+.vault-page #attempts{font-size:12px;line-height:1.4;min-height:17px;margin:4px 0}
+.vault-page .code{flex:0 0 auto;gap:clamp(12px,4vw,24px);margin:10px 0 14px}
+.vault-page .digit{width:clamp(30px,8.5vw,44px);height:clamp(44px,8dvh,56px);font-size:28px}
+.vault-page .keys{flex:1 0 196px;min-height:196px;grid-template-rows:repeat(4,minmax(44px,1fr));gap:7px}
+.vault-page .keys button{min-height:44px;padding:6px;font-size:25px}
+.vault-page .keys .small{font-size:12px}
+.vault-page #message{flex:0 0 auto;min-height:32px;line-height:1.35;font-size:12px;margin:7px 0 0}
+.vault-page .auto-check-note{font-size:10px;line-height:1.3;margin:2px 0 0}
+.vault-page .sound-controls{flex:0 0 40px;text-align:center}
+.vault-page .sound{margin:0;min-height:40px;padding:8px 16px;font-size:12px}
+.vault-page #resetLocked{flex:0 0 auto;min-height:36px;padding:6px;font-size:12px}
+.vault-page .victory{align-items:center;justify-content:space-evenly;gap:6px}
+.vault-page .victory h1{font-size:clamp(28px,8vw,38px);margin:4px 0}
+.vault-page .victory h2{font-size:clamp(21px,5.5vw,28px);line-height:1.2;margin:4px 0}
+.vault-page .victory p{font-size:13px;line-height:1.4;margin:4px 0}
+.vault-page .victory .mascot{flex:1 1 160px;min-height:50px;max-height:180px;width:145px;height:160px;max-width:48%;object-fit:contain}
+.vault-page .victory .text-button{flex:0 0 auto;min-height:40px;padding:8px;font-size:12px}
+.celebration{display:block;width:100vw;height:100vh;height:100dvh;z-index:10000}
+@media(max-height:650px){
+ .vault-page main{gap:6px}.vault-page header{flex-basis:28px}.vault-page .brand{font-size:30px}
+ .vault-page .card{padding:12px 14px}.vault-page .eyebrow{display:none}.vault-page h1{font-size:23px;margin:5px 0}
+ .vault-page .intro{font-size:12px}.vault-page .code{margin:8px 0 10px}.vault-page .digit{height:44px}
+ .vault-page .auto-check-note{display:none}.vault-page #message{min-height:30px;margin-top:5px}
+ .vault-page .sound-controls{flex-basis:36px}.vault-page .sound{min-height:36px;padding:6px 14px}
+ .vault-page .victory .mascot{max-height:140px}.vault-page .victory h1{font-size:30px}
+}
+@media(max-height:550px){
+ body.vault-page{padding-top:4px;padding-bottom:4px}.vault-page main{gap:4px}
+ .vault-page .card{padding:8px 12px}.vault-page .intro{display:none}.vault-page h1{font-size:21px;margin:4px 0}
+ .vault-page .code{margin:6px 0 8px}.vault-page .keys{flex-basis:188px;min-height:188px;gap:4px}
+ .vault-page #message{font-size:11px;min-height:28px}.vault-page #attempts{margin:2px 0}
+ .vault-page .victory{gap:3px}.vault-page .victory .mascot{max-height:100px}.vault-page .victory h1{font-size:26px}
+ .vault-page .victory p{font-size:12px}.vault-page .victory h2{font-size:22px}
+}
