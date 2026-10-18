@@ -75,3 +75,23 @@ test('un tir légèrement décalé est accepté dans la zone élargie',async()=>
   const shot=await (await api(env,'/shot',{session:session.session,seq:0})).json();assert.equal(shot.hit,true);assert.equal(shot.score,1);
  }finally{Date.now=realNow;}
 });
+test('les nouveaux identifiants et les anciens liens se résolvent sans transmettre les indices ni leur position',async()=>{
+ const {env}=setup();
+ for(const [legacy,token] of Object.entries({A:'tfn3j5u4',B:'vgyx24v5',C:'emhvcxu4',empty:'4ubsj88k'})){
+  for(const body of [{token},{legacy}]){
+   const r=await api(env,'/resolve',body);assert.equal(r.status,200);
+   assert.deepEqual(await r.json(),{token,kind:legacy==='empty'?'empty':'game'});
+  }
+ }
+ for(const body of [{token:'toString'},{token:'xxxxxxxx'},{legacy:'toString'},{}])assert.equal((await api(env,'/resolve',body)).status,400);
+ assert.equal((await api(env,'/resolve',{token:'tfn3j5u4'},{Origin:'https://evil.test'})).status,403);
+});
+test('la référence est imposée par le jeton serveur, et le QR sans indice ne peut pas ouvrir de partie',async()=>{
+ const {env,objects}=setup();
+ for(const [expected,token] of Object.entries({A:'tfn3j5u4',B:'vgyx24v5',C:'emhvcxu4'})){
+  const r=await api(env,'/session',{token,ref:'C'});assert.equal(r.status,200);const s=await r.json();
+  assert.equal((await objects.get('game:'+s.session).ctx.storage.get('game')).ref,expected);
+  assert.equal((await api(env,'/reward',{session:s.session})).status,403);
+ }
+ for(const token of ['4ubsj88k','xxxxxxxx','toString'])assert.equal((await api(env,'/session',{token,ref:'A'})).status,400);
+});

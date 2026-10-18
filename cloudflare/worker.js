@@ -1,6 +1,8 @@
 const GOAL=13,DURATION=15000,AIM_SPEED=300,HIT_RADIUS=.25,MIN_SHOT_INTERVAL=250;
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
 const positions={A:'left',B:'center',C:'right'};
+// Identifiants d'accès neutres : leur signification n'est jamais envoyée dans une URL.
+const scanRoutes=Object.freeze({tfn3j5u4:'A',vgyx24v5:'B',emhvcxu4:'C','4ubsj88k':'empty'});
 const snapshot=(s,now)=>({score:s.score,seq:s.seq,phase:s.phase,target:s.target,startedAt:s.startedAt,deadline:s.startedAt+DURATION,serverNow:now});
 
 export default {
@@ -12,17 +14,24 @@ export default {
   const respond=r=>{const h=new Headers(r.headers);Object.entries(headers).forEach(([k,v])=>h.set(k,v));return new Response(r.body,{status:r.status,headers:h});};
   if(request.method!=='POST')return respond(json({error:'Méthode non autorisée.'},405));
   const path=new URL(request.url).pathname;
-  if(!['/session','/shot','/reward'].includes(path))return respond(json({error:'Adresse inconnue.'},404));
+  if(!['/resolve','/session','/shot','/reward'].includes(path))return respond(json({error:'Adresse inconnue.'},404));
   if(!request.headers.get('Content-Type')?.startsWith('application/json'))return respond(json({error:'Format incorrect.'},415));
   if(Number(request.headers.get('Content-Length')||0)>2048)return respond(json({error:'Requête trop grande.'},413));
   try{
    const text=await request.text();if(text.length>2048)return respond(json({error:'Requête trop grande.'},413));
    let body;try{body=JSON.parse(text);}catch{return respond(json({error:'Requête invalide.'},400));}
    if(!body||typeof body!=='object'||Array.isArray(body))return respond(json({error:'Requête invalide.'},400));
+   if(path==='/resolve'){
+    let token=body.token;
+    if(Object.hasOwn(body,'legacy'))token=Object.keys(scanRoutes).find(k=>scanRoutes[k]===body.legacy);
+    if(typeof token!=='string'||!Object.hasOwn(scanRoutes,token))return respond(json({error:'QR code inconnu.'},400));
+    return respond(json({token,kind:scanRoutes[token]==='empty'?'empty':'game'}));
+   }
    let rewards;try{rewards=JSON.parse(env.REWARDS_JSON);}catch{return respond(json({error:'Le jeu sera bientôt disponible.'},503));}
    if(!Object.keys(positions).every(k=>/^\d{2}$/.test(rewards?.[k])))return respond(json({error:'Le jeu sera bientôt disponible.'},503));
    if(path==='/session'){
-    if(!Object.hasOwn(positions,body.ref))return respond(json({error:'QR code inconnu.'},400));
+    const ref=Object.hasOwn(body,'token')?(typeof body.token==='string'&&Object.hasOwn(scanRoutes,body.token)?scanRoutes[body.token]:undefined):body.ref;
+    if(!Object.hasOwn(positions,ref))return respond(json({error:'QR code inconnu.'},400));
     // Limite souple par adresse réseau, conservée une heure sans stocker l’adresse brute.
     const ip=request.headers.get('CF-Connecting-IP')||'unknown';
     const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(ip));
@@ -31,7 +40,7 @@ export default {
     const limit=await gate.fetch(new Request('https://internal/rate',{method:'POST'}));
     if(!limit.ok)return respond(limit);
     const session=crypto.randomUUID(),stub=env.SESSIONS.get(env.SESSIONS.idFromName('game:'+session));
-    const r=await stub.fetch(new Request('https://internal/start',{method:'POST',body:JSON.stringify({ref:body.ref})}));
+    const r=await stub.fetch(new Request('https://internal/start',{method:'POST',body:JSON.stringify({ref})}));
     const d=await r.json();return respond(json({...d,session},r.status));
    }
    if(typeof body.session!=='string'||!/^[-a-f0-9]{36}$/.test(body.session))return respond(json({error:'Partie inconnue.'},400));
