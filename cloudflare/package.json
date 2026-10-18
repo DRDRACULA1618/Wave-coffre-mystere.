@@ -1,0 +1,1 @@
+{"name":"wave-coffre-service","private":true,"type":"module","scripts":{"deploy":"wrangler deploy","dev":"wrangler dev","test":"node --test ../tests/service.test.mjs"},"devDependencies":{"wrangler":"^4.0.0"}}
