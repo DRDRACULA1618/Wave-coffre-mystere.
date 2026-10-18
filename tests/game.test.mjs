@@ -22,8 +22,8 @@ test('mode entraînement : treize paniers en moins de quinze secondes déclenche
  const g=game();await g.get('start').onclick();assert.equal(g.get('cover').hidden,true);assert.match(g.get('mode').textContent,/entraînement/);
  const started=g.time();g.step(0);
  for(let score=0;score<13;score++){
-  const target=parseFloat(g.get('zone').style.left)/100+.095;
-  while(Math.abs(.5+.44*Math.sin((g.time()-started)/220)-target)>.06)g.advance(5);
+  const target=parseFloat(g.get('zone').style.left)/100+.15;
+  while(Math.abs(.5+.44*Math.sin((g.time()-started)/260)-target)>.06)g.advance(5);
   await g.get('shoot').onclick();g.step(350);g.step(50);
  }
  assert.ok(g.time()-started<15000,'Les 13 paniers doivent être réalisables dans les 15 secondes');assert.equal(g.get('score').textContent,'13 / 13');assert.equal(g.get('result').hidden,false);assert.equal(g.get('play').hidden,true);assert.equal(g.get('reward').textContent,'');assert.match(g.get('resultNote').textContent,/activé/);

@@ -70,3 +70,7 @@ Références : [GitHub Pages](https://docs.github.com/en/pages/getting-started-w
 ## Affichage mobile du coffre
 
 Le clavier et la victoire utilisent la hauteur dynamique du navigateur (Safari et Android), avec une disposition compacte sur petits écrans. L’en-tête affiche uniquement « LE COFFRE MYSTÈRE ». Le cache hors connexion reste actif sans mention technique affichée. Les confettis sont dessinés immédiatement pendant douze secondes ; le réglage de réduction des animations conserve une décoration fixe.
+
+## Difficulté du défi
+
+L’objectif reste 13 paniers en 15 secondes. La zone de réussite couvre 30 % de la jauge, le curseur est légèrement ralenti et la cible reste plus près du centre pour limiter les déplacements brusques. Les réglages sont identiques dans le jeu d’entraînement et dans le service préparé pour Cloudflare.
