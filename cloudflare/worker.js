@@ -1,4 +1,4 @@
-const GOAL=13,DURATION=15000,AIM_SPEED=300,HIT_RADIUS=.25,MIN_SHOT_INTERVAL=250;
+const GOAL=13,DURATION=15000,MIN_SHOT_INTERVAL=150;
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
 const positions={A:'left',B:'center',C:'right'};
 // Identifiants d'accès neutres : leur signification n'est jamais envoyée dans une URL.
@@ -84,7 +84,8 @@ export class GameSession {
   if(now>=s.startedAt+DURATION)return json({error:'Le temps est écoulé.'},410);
   if(s.score>=GOAL)return json({error:'Défi déjà terminé.'},409);
   if(s.lastShot&&now-s.lastShot<MIN_SHOT_INTERVAL)return json({error:'Attends la fin du tir.'},429);
-  const aim=.5+.44*Math.sin((now-s.startedAt)/AIM_SPEED+s.phase),hit=Math.abs(aim-s.target)<=HIT_RADIUS;
+  // Défi accessible : chaque tir accepté marque, sans test de visée.
+  const hit=true;
   if(hit)s.score++;
   s.lastShot=now;s.seq++;
   
