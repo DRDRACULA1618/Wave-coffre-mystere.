@@ -76,3 +76,7 @@ Le clavier et la victoire utilisent la hauteur dynamique du navigateur (Safari e
 L’objectif reste 13 paniers en 15 secondes. La zone de réussite couvre la moitié de la jauge et reste fixe au centre. Le curseur est ralenti et les tirs s’enchaînent plus vite pour rendre le défi accessible. Les réglages sont identiques dans le jeu d’entraînement et dans le service préparé pour Cloudflare.
 
 Le jeu utilise la hauteur et la largeur de `visualViewport` quand elles sont disponibles ; le terrain se réduit pour conserver la jauge, le bouton Tirer et le son à l’écran. La cible est fixe et couvre 50 % de la jauge. Les confettis sont plus denses (240 éléments) et visibles 16 secondes.
+
+## Logo Wave
+
+Toutes les pages utilisent le fichier de logo fourni par l’utilisateur, pingouin et mot Wave réunis. `assets/logo-wave.png` est une copie exacte de ce fichier ; `assets/logo-wave.svg` l’incorpore sans retouche, avec un cadrage qui retire uniquement les marges transparentes à l’affichage. Les proportions et couleurs d’origine sont conservées. Le logo est également mis en cache avec le clavier hors connexion.

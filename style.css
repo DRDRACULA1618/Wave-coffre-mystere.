@@ -94,3 +94,13 @@ body.game-page{width:100%;height:100vh;height:var(--game-viewport-height,100dvh)
 .game-page.tiny-game .result h2{font-size:21px}.game-page.tiny-game .reward{font-size:52px}
 
 .game-page.micro-game .cover{padding:6px}.game-page.micro-game .cover p{display:none}.game-page.micro-game .cover .primary{min-height:36px;margin:0}
+
+/* Logo PNG officiel : aucune reconstruction typographique. */
+.brand{display:flex;align-items:center;flex:0 0 auto;min-width:0;line-height:0}
+.brand-logo{display:block;width:auto;height:48px;max-width:42vw;object-fit:contain}
+.vault-page header{flex-basis:44px}.vault-page .brand-logo{height:44px}
+.game-page header{flex-basis:40px}.game-page .brand-logo{height:40px}
+.game-page.short-game header{flex-basis:34px}.game-page.short-game .brand-logo{height:34px}
+.game-page.tiny-game header{flex-basis:30px}.game-page.tiny-game .brand-logo{height:30px}
+@media(max-height:650px){.vault-page header{flex-basis:36px}.vault-page .brand-logo{height:36px}}
+@media(max-height:550px){.vault-page header{flex-basis:32px}.vault-page .brand-logo{height:32px}}
