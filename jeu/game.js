@@ -6,7 +6,7 @@
   const api=(window.WAVE_CONFIG?.apiUrl||'').replace(/\/$/,'');
   // Vue de dos : la nageoire droite est à droite de l’écran.
   const BALL_START={x:246,y:278,r:16};
-  const GAME={goal:13,duration:15000,aimSpeed:300,hitRadius:.25,shotCooldown:280,flightDuration:200,flightEnd:280};
+  const GAME={goal:13,duration:15000,aimSpeed:300,hitRadius:.45,shotCooldown:180,flightDuration:120,flightEnd:160};
   let state='ready',score=0,phase=0,target=.5,epoch=0,deadline=0,flight=null,lastShot=-Infinity,session='',seq=0,clockOffset=0,pending=false;
   const practice=!api&&!token,now=()=>Date.now()+clockOffset;
   let valid=!token&&['A','B','C'].includes(ref),resolved=!token;
@@ -52,7 +52,7 @@
         return;
       }
       valid=true;$('gameCard').hidden=false;$('mode').textContent='';
-      $('coverTitle').textContent='À toi de jouer !';$('coverText').textContent='Touche « Tirer ! » quand le curseur est dans la grande zone bleue.';
+      $('coverTitle').textContent='À toi de jouer !';$('coverText').textContent='Appuie sur « Tirer ! » : chaque tir compte. Marque 13 paniers en 15 secondes.';
       $('start').textContent='Commencer le défi';$('start').disabled=!mascotReady;state='ready';
     }catch(e){
       $('loadingCard').hidden=true;$('gameCard').hidden=false;
@@ -68,13 +68,13 @@
   async function shoot(){
     if(state!=='playing'||flight||pending||now()-lastShot<GAME.shotCooldown)return;
     if(now()>=deadline){fail('Le temps est écoulé !','Tu as marqué '+score+' panier(s) sur '+GAME.goal+'. Retente le défi !');return;}
-    const t=now(),a=aim(t);lastShot=t;pending=true;$('shoot').disabled=true;$('feedback').textContent='';
+    lastShot=now();pending=true;$('shoot').disabled=true;$('feedback').textContent='';
     try{
       let hit;
-      if(practice){hit=Math.abs(a-target)<=GAME.hitRadius;if(hit)score++;seq++;}
+      if(practice){hit=true;score++;seq++;}
       else{const d=await request('/shot',{session,seq});hit=d.hit;accept(d);}
       if(state!=='playing')return;
-      flight={at:performance.now(),hit,x:hit?195:195+(a<target?-110:110)};pending=false;WaveUI.shootSound();
+      flight={at:performance.now(),hit,x:hit?195:305};pending=false;WaveUI.shootSound();
     }catch(e){pending=false;fail('Connexion interrompue','Ta partie ne peut pas continuer. Relance le défi lorsque la connexion revient.');}
   }
   function ellipse(x,y,rx,ry,color){ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();}

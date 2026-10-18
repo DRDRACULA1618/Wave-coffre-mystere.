@@ -57,7 +57,7 @@ Chaque participant dispose de deux combinaisons complètes. Après deux erreurs,
 
 ## Protection et limites
 
-Les indices sont conservés dans les secrets Cloudflare, et le serveur compte les tirs avec un délai minimal et une limite de 15 secondes. Un joueur ne peut pas simplement envoyer « score : 13 ». La visée peut toutefois être automatisée et les références A/B/C sont modifiables : ce système vise une protection légère, pas une compétition anti-triche.
+Les indices sont conservés dans les secrets Cloudflare, et le serveur compte les tirs avec un délai minimal et une limite de 15 secondes. Un joueur ne peut pas simplement envoyer « score : 13 ». Les appuis peuvent être automatisés : ce système vise une protection légère pour une animation, pas une compétition anti-triche.
 
 Le clavier est volontairement autonome. L’empreinte de la combinaison évite une lecture immédiate du code, mais elle peut être testée par recherche exhaustive. Utiliser l’appareil surveillé par l’équipe. L’animation n’actionne aucune serrure physique.
 
@@ -73,9 +73,9 @@ Le clavier et la victoire utilisent la hauteur dynamique du navigateur (Safari e
 
 ## Difficulté du défi
 
-L’objectif reste 13 paniers en 15 secondes. La zone de réussite couvre la moitié de la jauge et reste fixe au centre. Le curseur est ralenti et les tirs s’enchaînent plus vite pour rendre le défi accessible. Les réglages sont identiques dans le jeu d’entraînement et dans le service préparé pour Cloudflare.
+L’objectif reste 13 paniers en 15 secondes. Chaque tir accepté compte désormais comme un panier, sans précision de visée ni timing à respecter. Le bouton Tirer se réactive après une animation de 160 ms ; le délai local minimal est de 180 ms et le serveur impose un minimum de 150 ms. La jauge de visée est masquée et les consignes invitent simplement à appuyer sur Tirer. Le score reste vérifié par Cloudflare, avec un seul panier par tir, et aucun indice avant 13 paniers.
 
-Le jeu utilise la hauteur et la largeur de `visualViewport` quand elles sont disponibles ; le terrain se réduit pour conserver la jauge, le bouton Tirer et le son à l’écran. La cible est fixe et couvre 50 % de la jauge. Les confettis sont plus denses (240 éléments) et visibles 16 secondes.
+Le jeu utilise la hauteur et la largeur de `visualViewport` quand elles sont disponibles ; le terrain se réduit pour conserver la jauge, le bouton Tirer et le son à l’écran. Les confettis sont plus denses (240 éléments) et visibles 16 secondes.
 
 ## Logo Wave
 
