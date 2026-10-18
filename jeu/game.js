@@ -3,6 +3,8 @@
   const $=id=>document.getElementById(id),canvas=$('court'),ctx=canvas.getContext('2d');ctx.scale(2,2);
   const params=new URLSearchParams(location.search),ref=params.get('id');
   const api=(window.WAVE_CONFIG?.apiUrl||'').replace(/\/$/,'');
+  // Point de départ devant le pingouin, sur l’axe du panier.
+  const BALL_START={x:195,y:200,r:20};
   let state='ready',score=0,phase=0,target=.7,epoch=0,deadline=0,flight=null,lastShot=-Infinity,session='',seq=0,clockOffset=0,pending=false;
   const practice=!api,valid=['A','B','C'].includes(ref),now=()=>Date.now()+clockOffset;
   $('mode').textContent=!valid?'Scanne un QR code du jeu pour commencer.':practice?'Mode entraînement · Les indices seront disponibles après l’activation du jeu.':'';
@@ -59,9 +61,9 @@
     ctx.fillStyle='#20add3';ctx.fillRect(192,75,6,75);ctx.fillStyle='#fff';ctx.beginPath();ctx.roundRect(145,24,100,69,4);ctx.fill();ctx.strokeStyle='#00b5df';ctx.strokeRect(177,43,37,36);
     ctx.strokeStyle='#8ebaca';ctx.lineWidth=1.5;for(let i=0;i<6;i++){ctx.beginPath();ctx.moveTo(165+i*12,83);ctx.lineTo(178+i*7,126);ctx.stroke();}for(let j=0;j<4;j++){ctx.beginPath();ctx.ellipse(195,90+j*10,28-j*4,4,0,0,Math.PI*2);ctx.stroke();}
     const lift=flight?Math.sin(Math.min((t-flight.at)/800,1)*Math.PI)*8:Math.sin(t/800)*1.5;
+    if(flight){const p=Math.min((t-flight.at)/800,1),x=BALL_START.x+(flight.x-BALL_START.x)*p,y=BALL_START.y+(83-BALL_START.y)*p-110*4*p*(1-p);if(p<1)ball(x,y,BALL_START.r-10*p,t/170);else if(p<1.2)ball(flight.x,83+(p-1)*60,10,t/170);}
+    else ball(BALL_START.x,BALL_START.y,BALL_START.r,t/2500);
     if(mascotReady){const h=172,w=h*mascot.naturalWidth/mascot.naturalHeight;ellipse(195,390,49,7,'#1eb7e15c');ctx.drawImage(mascot,195-w/2,224-lift,w,h);}
-    if(flight){const p=Math.min((t-flight.at)/800,1),x=195+(flight.x-195)*p,y=270+(83-270)*p-110*4*p*(1-p);if(p<1)ball(x,y,20-10*p,t/170);else if(p<1.2)ball(flight.x,83+(p-1)*60,10,t/170);}
-    else ball(195,270,21,t/2500);
     ctx.strokeStyle='#f28324';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(195,83,34,6,0,0,Math.PI*2);ctx.stroke();
   }
   function frame(t){
