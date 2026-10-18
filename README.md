@@ -8,8 +8,14 @@ Un seul site pour le Salon de l’Épargne : le mini-jeu de basket, les trois pa
 - Sans Cloudflare configuré, le jeu affiche clairement « Mode entraînement » et ne révèle aucun indice.
 - Le clavier du coffre fonctionne sans Cloudflare, vérifie au sixième chiffre, puis lance animation et son activable.
 - Le mode hors connexion concerne uniquement le clavier. Attendre le message « Hors connexion prêt », puis tester en mode avion sur le téléphone du salon. Un navigateur peut vider ses données : refaire le test avant l’événement.
-- Les écrans d’indices et « Pas de chance » utilisent un nouveau graphisme vectoriel. Les PNG historiques ne sont pas inclus, car ils doivent être fournis à nouveau.
-- Les illustrations du jeu ne sont pas nécessaires au fonctionnement : le terrain et le pingouin de dos sont dessinés par le jeu lui-même.
+- Les écrans d’indices, « Pas de chance » et le clavier utilisent le fichier original du pingouin Wave fourni par l’utilisateur, sans retouche ni déformation. Les PNG historiques de mise en page ne sont pas inclus, car ils doivent être fournis à nouveau.
+- Le pingouin de dos du jeu est une adaptation de cette référence, et non une vue officielle fournie. Le terrain reste dessiné par le jeu.
+
+## Visuels du pingouin
+
+- `assets/pingouin-wave-original.png` : copie exacte du fichier utilisateur, fond bleu compris.
+- `assets/pingouin-wave-dos.png` : adaptation vue de dos sur fond transparent, créée avec l’outil de génération d’images intégré. Consigne : silhouette noire simple, pied orange en demi-cercle, nageoire levée à droite, aucun visage ni ventre blanc, sans décor, dans le style de la référence.
+- Les proportions des deux fichiers sont conservées à l’affichage. La vue de dos est une interprétation, sa fidélité à une vue officielle de dos ne peut pas être garantie.
 
 ## Étape 1 · Activer le site
 

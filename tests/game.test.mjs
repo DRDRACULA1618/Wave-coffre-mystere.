@@ -10,7 +10,8 @@ function game(search='?id=A',apiUrl='',fetchFn){
  get('result').hidden=true;get('shoot').disabled=true;
  const FakeDate=class extends Date{static now(){return time;}};
  const math=Object.create(Math);math.random=()=>0;
- const sandbox={document:{getElementById:get,querySelectorAll:()=>dots,addEventListener(){}},location:{search},window:{WAVE_CONFIG:{apiUrl}},URLSearchParams,performance:{now:()=>time},Date:FakeDate,Math:math,AbortSignal,fetch:fetchFn,requestAnimationFrame:f=>frame=f,WaveUI:{tone(){},win(){},confetti(){},enableSound:async()=>true}};
+ class LoadedImage{constructor(){this.naturalWidth=1046;this.naturalHeight=1503;}set src(value){this.url=value;this.onload?.();}}
+ const sandbox={Image:LoadedImage,document:{getElementById:get,querySelectorAll:()=>dots,addEventListener(){}},location:{search},window:{WAVE_CONFIG:{apiUrl}},URLSearchParams,performance:{now:()=>time},Date:FakeDate,Math:math,AbortSignal,fetch:fetchFn,requestAnimationFrame:f=>frame=f,WaveUI:{tone(){},win(){},confetti(){},enableSound:async()=>true}};
  vm.runInNewContext(fs.readFileSync(new URL('../jeu/game.js',import.meta.url),'utf8'),sandbox);
  return {get,step(ms){time+=ms;frame(time);},advance(ms){time+=ms;},time:()=>time};
 }
