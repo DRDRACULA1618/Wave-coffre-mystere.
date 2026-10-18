@@ -47,3 +47,50 @@ body.vault-page{height:100vh;height:100dvh;min-height:0;padding:max(8px,env(safe
  .vault-page .victory{gap:3px}.vault-page .victory .mascot{max-height:100px}.vault-page .victory h1{font-size:26px}
  .vault-page .victory p{font-size:12px}.vault-page .victory h2{font-size:22px}
 }
+
+/* Le terrain cède la place aux commandes, jamais l’inverse. */
+body.game-page{width:100%;height:100vh;height:var(--game-viewport-height,100dvh);min-height:0;padding:8px max(12px,env(safe-area-inset-right)) max(44px,calc(env(safe-area-inset-bottom) + 8px)) max(12px,env(safe-area-inset-left));display:flex;align-items:center;justify-content:center;overflow:hidden;overscroll-behavior:none}
+.game-page main{width:min(100%,460px);height:100%;max-height:900px;min-width:0;min-height:0;display:flex;flex-direction:column;gap:8px}
+.game-page header{flex:0 0 32px;margin:0 4px;min-width:0}
+.game-page .brand{font-size:34px}.game-page .event{font-size:9px;letter-spacing:1px;line-height:1.3}
+.game-page .card{flex:1 1 0;min-height:0;min-width:0;padding:14px 16px;display:flex;flex-direction:column;border-radius:24px}
+.game-page .game-heading{flex:0 0 auto}
+.game-page h1{font-size:clamp(21px,5.8vw,27px);line-height:1.15;margin:0 0 5px}
+.game-page #mode{font-size:10px;line-height:1.3;margin:0;min-height:0}
+.game-page #mode:empty{display:none}
+.game-page .stats{flex:0 0 auto;margin:10px 0 8px;gap:8px}
+.game-page .stat{padding:8px 10px;min-width:0;font-size:9px}.game-page .stat strong{font-size:23px}
+.game-page .progress{flex:0 0 5px;gap:4px;margin:0 0 10px}.game-page .progress i{height:5px;min-width:0}
+.game-page #play{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
+.game-page .arena{flex:1 1 0;min-height:0;min-width:0;border-radius:16px}
+.game-page canvas.court{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;object-fit:contain}
+.game-page .game-controls{flex:0 0 auto;padding-top:15px}
+.game-page .gauge{height:17px;margin:0 0 7px}
+.game-page .hint{font-size:9px;line-height:1.3;margin:0 0 7px}
+.game-page .game-actions{display:flex;gap:8px;align-items:stretch}
+.game-page #shoot{flex:1 1 0;width:auto;min-height:48px;padding:10px 16px;font-size:20px}
+.game-page #sound{flex:0 0 105px;min-height:48px;margin:0;padding:8px;font-size:11px;line-height:1.3}
+.game-page .cover{padding:10px;overflow:hidden}
+.game-page .cover h2{font-size:22px;line-height:1.15;margin:4px 0}
+.game-page .cover p{font-size:12px;line-height:1.3;margin:7px 0}
+.game-page .cover .primary{min-height:44px;font-size:14px;padding:9px 12px;margin-top:6px}
+.game-page .feedback{top:10px;font-size:16px}
+.game-page .result{flex:1 1 0;min-height:0;padding:16px 12px 106px;display:flex;flex-direction:column;justify-content:center;align-items:center}
+.game-page .result h2{font-size:25px;margin:4px 0}.game-page .result p{font-size:12px;line-height:1.4;margin:5px 0}
+.game-page .reward{font-size:clamp(54px,12vh,90px)}.game-page .result .mascot{width:70px;height:88px;bottom:8px}
+.game-page.short-game main{gap:5px}.game-page.short-game header{flex-basis:26px}.game-page.short-game .brand{font-size:28px}
+.game-page.short-game .card{padding:10px 12px}.game-page.short-game h1{font-size:21px;margin-bottom:3px}
+.game-page.short-game .stats{margin:6px 0}.game-page.short-game .stat{padding:6px 9px}.game-page.short-game .stat strong{font-size:21px}
+.game-page.short-game .progress{margin-bottom:6px}.game-page.short-game .game-controls{padding-top:12px}
+.game-page.short-game #shoot,.game-page.short-game #sound{min-height:44px}
+.game-page.tiny-game header{flex-basis:22px}.game-page.tiny-game .brand{font-size:24px}
+.game-page.tiny-game .card{padding:8px 10px}.game-page.tiny-game h1{font-size:18px}
+.game-page.tiny-game #mode{font-size:9px;line-height:1.2}.game-page.tiny-game .stats{margin:4px 0}
+.game-page.tiny-game .stat{padding:4px 8px}.game-page.tiny-game .stat strong{font-size:18px}
+.game-page.tiny-game .cover h2{display:none}.game-page.tiny-game .cover p{font-size:11px;margin:3px 0}
+.game-page.tiny-game .cover .primary{min-height:40px;padding:7px 10px;margin-top:4px}
+.game-page.tiny-game .hint{display:none}.game-page.tiny-game .gauge{height:14px;margin-bottom:6px}
+.game-page.tiny-game .result{padding:8px 12px}.game-page.tiny-game .result .mascot{display:none}
+.game-page.tiny-game .result h2{font-size:21px}.game-page.tiny-game .reward{font-size:52px}
+
+.game-page.micro-game .cover{padding:6px}.game-page.micro-game .cover p{display:none}.game-page.micro-game .cover .primary{min-height:36px;margin:0}

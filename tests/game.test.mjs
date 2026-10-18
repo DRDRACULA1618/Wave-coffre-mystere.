@@ -19,11 +19,11 @@ test('référence absente : pas de démarrage et aucune réponse divulguée',()=
  const g=game('');assert.equal(g.get('start').disabled,true);assert.match(g.get('mode').textContent,/Scanne/);assert.equal(g.get('reward').textContent,'');
 });
 test('mode entraînement : treize paniers en moins de quinze secondes déclenchent la fin sans divulguer un faux indice',async()=>{
- const g=game();await g.get('start').onclick();assert.equal(g.get('cover').hidden,true);assert.match(g.get('mode').textContent,/entraînement/);
+ const g=game();await g.get('start').onclick();assert.equal(g.get('cover').hidden,true);assert.match(g.get('mode').textContent,/entraînement/i);
  const started=g.time();g.step(0);
  for(let score=0;score<13;score++){
-  const target=parseFloat(g.get('zone').style.left)/100+.15;
-  while(Math.abs(.5+.44*Math.sin((g.time()-started)/260)-target)>.06)g.advance(5);
+  const target=parseFloat(g.get('zone').style.left)/100+.25;
+  while(Math.abs(.5+.44*Math.sin((g.time()-started)/300)-target)>.06)g.advance(5);
   await g.get('shoot').onclick();g.step(350);g.step(50);
  }
  assert.ok(g.time()-started<15000,'Les 13 paniers doivent être réalisables dans les 15 secondes');assert.equal(g.get('score').textContent,'13 / 13');assert.equal(g.get('result').hidden,false);assert.equal(g.get('play').hidden,true);assert.equal(g.get('reward').textContent,'');assert.match(g.get('resultNote').textContent,/activé/);

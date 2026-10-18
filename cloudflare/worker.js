@@ -1,4 +1,4 @@
-const GOAL=13,DURATION=15000,AIM_SPEED=260,HIT_RADIUS=.15,MIN_SHOT_INTERVAL=350;
+const GOAL=13,DURATION=15000,AIM_SPEED=300,HIT_RADIUS=.25,MIN_SHOT_INTERVAL=250;
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
 const positions={A:'left',B:'center',C:'right'};
 const snapshot=(s,now)=>({score:s.score,seq:s.seq,phase:s.phase,target:s.target,startedAt:s.startedAt,deadline:s.startedAt+DURATION,serverNow:now});
@@ -58,7 +58,7 @@ export class GameSession {
   if(path==='/start'){
    if(!Object.hasOwn(positions,body.ref))return json({error:'QR code inconnu.'},400);
    if(await store.get('game'))return json({error:'Partie déjà créée.'},409);
-   const s={ref:body.ref,startedAt:now,score:0,seq:0,phase:Math.random()*Math.PI*2,target:.35+Math.random()*.3,lastShot:0,lastResponse:null};
+   const s={ref:body.ref,startedAt:now,score:0,seq:0,phase:Math.random()*Math.PI*2,target:.5,lastShot:0,lastResponse:null};
    await store.put('game',s);await store.setAlarm(now+600000);return json(snapshot(s,now));
   }
   const s=await store.get('game');if(!s||now>s.startedAt+600000)return json({error:'Cette partie a expiré. Relance le défi.'},410);
@@ -78,7 +78,7 @@ export class GameSession {
   const aim=.5+.44*Math.sin((now-s.startedAt)/AIM_SPEED+s.phase),hit=Math.abs(aim-s.target)<=HIT_RADIUS;
   if(hit)s.score++;
   s.lastShot=now;s.seq++;
-  if(hit)s.target=.35+Math.random()*.3;
+  
   const response={...snapshot(s,now),hit};s.lastResponse=response;
   await store.put('game',s);return json(response);
  }

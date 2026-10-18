@@ -7,10 +7,10 @@ Un seul site pour le Salon de l’Épargne : le mini-jeu de basket, les trois pa
 - Le jeu se présente verticalement, avec le pingouin de dos face au panier : 13 paniers en 15 secondes.
 - Sans Cloudflare configuré, le jeu affiche clairement « Mode entraînement » et ne révèle aucun indice.
 - Le clavier du coffre fonctionne sans Cloudflare, vérifie au sixième chiffre, puis lance animation et son activable. Deux combinaisons incorrectes bloquent le clavier ; l’équipe peut réinitialiser les essais.
-- Le ballon est tenu dans la nageoire droite du pingouin vu de dos. Les tirs et paniers ont des bruitages légers, activés au démarrage du défi si le navigateur le permet ; le bouton de son permet de les couper.
+- Le ballon est tenu dans la nageoire droite du pingouin vu de dos. Les tirs et paniers ont des bruitages légers, activés par défaut au premier appui sur « Commencer » si le navigateur le permet ; le bouton de son permet de les couper.
 - Le mode hors connexion concerne uniquement le clavier. Après un premier chargement complet, tester en mode avion sur le téléphone du salon. Un navigateur peut vider ses données : refaire le test avant l’événement.
 - Les écrans d’indices, « Pas de chance » et le clavier utilisent le fichier original du pingouin Wave fourni par l’utilisateur, sans retouche ni déformation. Les PNG historiques de mise en page ne sont pas inclus, car ils doivent être fournis à nouveau.
-- Le pingouin de dos du jeu est une adaptation de cette référence, et non une vue officielle fournie. Le terrain reste dessiné par le jeu.
+- Le pingouin de dos du jeu est une adaptation de cette référence, et non une vue officielle fournie. Le terrain reste dessiné par le jeu. Sa taille s’adapte à la hauteur disponible pour garder la jauge, « Tirer » et le son visibles sans défilement, y compris dans les navigateurs intégrés.
 
 ## Visuels du pingouin
 
@@ -69,8 +69,10 @@ Références : [GitHub Pages](https://docs.github.com/en/pages/getting-started-w
 
 ## Affichage mobile du coffre
 
-Le clavier et la victoire utilisent la hauteur dynamique du navigateur (Safari et Android), avec une disposition compacte sur petits écrans. L’en-tête affiche uniquement « LE COFFRE MYSTÈRE ». Le cache hors connexion reste actif sans mention technique affichée. Les confettis sont dessinés immédiatement pendant douze secondes ; le réglage de réduction des animations conserve une décoration fixe.
+Le clavier et la victoire utilisent la hauteur dynamique du navigateur (Safari et Android), avec une disposition compacte sur petits écrans. L’en-tête affiche uniquement « LE COFFRE MYSTÈRE ». Le cache hors connexion reste actif sans mention technique affichée. Les confettis sont dessinés immédiatement pendant seize secondes ; le réglage de réduction des animations conserve une décoration fixe.
 
 ## Difficulté du défi
 
-L’objectif reste 13 paniers en 15 secondes. La zone de réussite couvre 30 % de la jauge, le curseur est légèrement ralenti et la cible reste plus près du centre pour limiter les déplacements brusques. Les réglages sont identiques dans le jeu d’entraînement et dans le service préparé pour Cloudflare.
+L’objectif reste 13 paniers en 15 secondes. La zone de réussite couvre la moitié de la jauge et reste fixe au centre. Le curseur est ralenti et les tirs s’enchaînent plus vite pour rendre le défi accessible. Les réglages sont identiques dans le jeu d’entraînement et dans le service préparé pour Cloudflare.
+
+Le jeu utilise la hauteur et la largeur de `visualViewport` quand elles sont disponibles ; le terrain se réduit pour conserver la jauge, le bouton Tirer et le son à l’écran. La cible est fixe et couvre 50 % de la jauge. Les confettis sont plus denses (240 éléments) et visibles 16 secondes.

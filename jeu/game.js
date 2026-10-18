@@ -5,11 +5,11 @@
   const api=(window.WAVE_CONFIG?.apiUrl||'').replace(/\/$/,'');
   // Vue de dos : la nageoire droite est à droite de l’écran.
   const BALL_START={x:246,y:278,r:16};
-  const GAME={goal:13,duration:15000,aimSpeed:260,hitRadius:.15,shotCooldown:400,flightDuration:300,flightEnd:350};
+  const GAME={goal:13,duration:15000,aimSpeed:300,hitRadius:.25,shotCooldown:280,flightDuration:200,flightEnd:280};
   let state='ready',score=0,phase=0,target=.5,epoch=0,deadline=0,flight=null,lastShot=-Infinity,session='',seq=0,clockOffset=0,pending=false;
   const practice=!api,valid=['A','B','C'].includes(ref),now=()=>Date.now()+clockOffset;
   let soundOptOut=false,lastCountdown=-1;
-  $('mode').textContent=!valid?'Scanne un QR code du jeu pour commencer.':practice?'Mode entraînement · Les indices seront disponibles après l’activation du jeu.':'';
+  $('mode').textContent=!valid?'Scanne un QR code du jeu pour commencer.':practice?'Entraînement · Indices à activer':'';
   $('start').disabled=!valid;
   const mascot=new Image();let mascotReady=false;
   $('start').disabled=true;
@@ -29,9 +29,9 @@
   function fail(title,text){state='lost';flight=null;pending=false;$('shoot').disabled=true;$('cover').hidden=false;$('coverTitle').textContent=title;$('coverText').textContent=text;$('start').textContent='Réessayer';$('start').disabled=false;}
   async function start(){
     if(!mascotReady||!valid||state==='starting'||state==='playing')return;state='starting';$('start').disabled=true;$('coverText').textContent='Prépare-toi…';
-    if(!soundOptOut)WaveUI.enableSound().then(ok=>{$('sound').textContent=ok?'Couper le son':'Activer le son';});
+    if(!soundOptOut)WaveUI.enableSound().then(ok=>{if(soundOptOut){WaveUI.disableSound();return;}$('sound').textContent=ok?'Son : activé':'Activer le son';if(!ok)soundOptOut=true;});
     try{
-      if(practice){clockOffset=0;epoch=Date.now();deadline=epoch+GAME.duration;phase=Math.random()*6;target=.35+Math.random()*.3;score=0;seq=0;}
+      if(practice){clockOffset=0;epoch=Date.now();deadline=epoch+GAME.duration;phase=Math.random()*6;target=.5;score=0;seq=0;}
       else{const d=await request('/session',{ref});session=d.session;accept(d);}
       flight=null;lastShot=-Infinity;lastCountdown=-1;pending=false;state='playing';$('feedback').textContent='';$('cover').hidden=true;$('shoot').disabled=false;$('start').disabled=false;stats();
     }catch(e){fail('Connexion indisponible',e.message);}
@@ -72,7 +72,7 @@
   function frame(t){
     court(t);
     if(state==='playing'){
-      if(flight&&t-flight.at>=GAME.flightEnd){const hit=flight.hit;flight=null;$('feedback').textContent=hit?'Panier ! 🏀':'Presque ! Ajuste ton timing.';if(hit)WaveUI.basketSound();else WaveUI.missSound();stats();if(score>=GAME.goal){win();}else{if(practice&&hit)target=.35+Math.random()*.3;$('shoot').disabled=false;}}
+      if(flight&&t-flight.at>=GAME.flightEnd){const hit=flight.hit;flight=null;$('feedback').textContent=hit?'Panier ! 🏀':'Presque ! Ajuste ton timing.';if(hit)WaveUI.basketSound();else WaveUI.missSound();stats();if(score>=GAME.goal){win();}else{$('shoot').disabled=false;}}
       if(state==='playing'&&now()>=deadline&&!flight&&!pending){$('timer').textContent='00:00';fail('Le temps est écoulé !','Tu as marqué '+score+' panier(s) sur '+GAME.goal+'. Retente le défi pour découvrir ton indice.');}
       if(state==='playing')stats();
     }
@@ -80,7 +80,7 @@
     requestAnimationFrame(frame);
   }
   $('start').onclick=start;$('shoot').onclick=shoot;$('retryReward').onclick=reveal;
-  $('sound').onclick=async()=>{if(WaveUI.isSoundEnabled()){WaveUI.disableSound();soundOptOut=true;$('sound').textContent='Activer le son';}else{soundOptOut=false;$('sound').textContent=await WaveUI.enableSound()?'Couper le son':'Vérifie le son du téléphone';}};
+  $('sound').onclick=async()=>{if(!soundOptOut){soundOptOut=true;WaveUI.disableSound();$('sound').textContent='Son : coupé';}else{const enabled=await WaveUI.enableSound();soundOptOut=!enabled;$('sound').textContent=enabled?'Son : activé':'Activer le son';}};
   document.addEventListener('keydown',e=>{if(e.code==='Space'&&!e.repeat&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&e.target.tagName!=='BUTTON'&&state==='playing'){e.preventDefault();shoot();}});
   requestAnimationFrame(frame);
 })();

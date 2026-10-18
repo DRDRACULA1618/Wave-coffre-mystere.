@@ -12,8 +12,8 @@ function ui(reduced){
  return {api:sandbox.window.WaveUI,canvas,state:()=>({painted,frames,removed,timerDuration})};
 }
 test('les confettis sont visibles immédiatement, avant toute animation, dans la hauteur utile du mobile',()=>{
- const view=ui(false),stop=view.api.confetti();assert.ok(view.state().painted>0);assert.equal(view.state().frames,1);assert.equal(view.state().timerDuration,12000);assert.equal(view.canvas.height,1340);assert.equal(view.canvas.style.height,'670px');stop();assert.equal(view.state().removed,1);
+ const view=ui(false),stop=view.api.confetti();assert.ok(view.state().painted>0);assert.equal(view.state().frames,1);assert.equal(view.state().timerDuration,16000);assert.equal(view.canvas.height,1340);assert.equal(view.canvas.style.height,'670px');stop();assert.equal(view.state().removed,1);
 });
 test('le réglage Réduire les animations conserve un décor de confettis visible et fixe',()=>{
- const view=ui(true);view.api.confetti();assert.ok(view.state().painted>0);assert.equal(view.state().frames,0);assert.equal(view.state().removed,0);assert.equal(view.state().timerDuration,12000);
+ const view=ui(true);view.api.confetti();assert.ok(view.state().painted>0);assert.equal(view.state().frames,0);assert.equal(view.state().removed,0);assert.equal(view.state().timerDuration,16000);
 });

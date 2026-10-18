@@ -25,7 +25,7 @@ test('les trois références renvoient chacune leur réponse après treize vrais
     const state=await obj.ctx.storage.get('game');
     // Attend le passage dans la cible à partir d’au moins 0,4 seconde après le dernier tir.
     time+=400;
-    while(Math.abs(.5+.44*Math.sin((time-state.startedAt)/260+state.phase)-state.target)>.05)time+=5;
+    while(Math.abs(.5+.44*Math.sin((time-state.startedAt)/300+state.phase)-state.target)>.05)time+=5;
     const response=await api(env,'/shot',{session:s.session,seq,score:100});assert.equal(response.status,200);
     const shot=await response.json();assert.equal(shot.hit,true);assert.equal(shot.score,seq+1);assert.equal(shot.reward,undefined);
     if(seq===11)assert.equal((await api(env,'/reward',{session:s.session})).status,403);
@@ -39,7 +39,7 @@ test('un tir manqué ne donne pas de point ; délai entre tirs et expiration son
  const {env,objects}=setup(),realNow=Date.now;let time=1900000000000;Date.now=()=>time;
  try{
   const s=await (await api(env,'/session',{ref:'B'})).json(),obj=objects.get('game:'+s.session),state=await obj.ctx.storage.get('game');
-  time+=400;while(Math.abs(.5+.44*Math.sin((time-state.startedAt)/260+state.phase)-state.target)<.2)time+=5;
+  time+=400;while(Math.abs(.5+.44*Math.sin((time-state.startedAt)/300+state.phase)-state.target)<.32)time+=5;
   const miss=await (await api(env,'/shot',{session:s.session,seq:0})).json();assert.equal(miss.hit,false);assert.equal(miss.score,0);
   assert.equal((await api(env,'/shot',{session:s.session,seq:1})).status,429);
   assert.equal((await api(env,'/shot',{session:s.session,seq:2})).status,409);
@@ -68,8 +68,8 @@ test('un tir légèrement décalé est accepté dans la zone élargie',async()=>
   const session=await (await api(env,'/session',{ref:'A'})).json(),obj=objects.get('game:'+session.session),state=await obj.ctx.storage.get('game');
   time+=400;
   for(let steps=0;steps<1000;steps++){
-   const distance=Math.abs(.5+.44*Math.sin((time-state.startedAt)/260+state.phase)-state.target);
-   if(distance>.11&&distance<.14)break;
+   const distance=Math.abs(.5+.44*Math.sin((time-state.startedAt)/300+state.phase)-state.target);
+   if(distance>.19&&distance<.23)break;
    time+=5;
   }
   const shot=await (await api(env,'/shot',{session:session.session,seq:0})).json();assert.equal(shot.hit,true);assert.equal(shot.score,1);
