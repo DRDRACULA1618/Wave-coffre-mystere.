@@ -92,3 +92,7 @@ Les anciens `/jeu/?id=A`, `B`, `C` et `/pas-de-chance/` restent présents et dem
 ## Consignes de la chasse
 
 La page sans indice affiche en grand « Pas de chance cette fois ! » puis « Scanne le prochain QR code ! ». Après une victoire, l’indice et la consigne « Fais une capture d’écran de cet indice. Puis scanne le prochain QR code. » sont agrandis. Les statistiques du jeu disparaissent à la victoire pour laisser la place à la consigne sur mobile. Les affiches invitent à scanner avec l’appareil photo pour tenter de remporter la cagnotte mystère.
+
+## Suivi des trois indices
+
+Les quatre pages rappellent « Code à 6 chiffres » et « 3 indices de 2 chiffres ». Un indice n’est enregistré qu’après réception réussie de la récompense du serveur. Chaque position (gauche, centre, droite) n’est comptée qu’une seule fois. Le navigateur mémorise uniquement les positions obtenues, sans les chiffres, sous `wave-hunt-found-v1`. La page sans indice et les parties d’entraînement ne font pas avancer le compteur. À 3/3, le message de victoire et la page sans indice invitent à rejoindre le coffre. Le suivi reste propre au navigateur et n’est pas synchronisé entre appareils ou navigateurs. Si le stockage est bloqué, le jeu continue et le compteur fonctionne pour la page ouverte.

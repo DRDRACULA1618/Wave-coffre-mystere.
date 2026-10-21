@@ -106,6 +106,13 @@ body.game-page{width:100%;height:100vh;height:var(--game-viewport-height,100dvh)
 @media(max-height:550px){.vault-page header{flex-basis:32px}.vault-page .brand-logo{height:32px}}
 
 /* Consignes visibles après le scan et après la victoire. */
+.hunt-progress{flex:0 0 auto;border-radius:14px;background:#e9faff;padding:9px 12px;color:var(--ink);text-align:center}
+.hunt-rule{display:flex;justify-content:center;align-items:baseline;gap:7px;flex-wrap:wrap;line-height:1.3}
+.hunt-rule strong{font-size:14px}.hunt-rule span{font-size:11px}
+.hunt-progress #huntStatus{font-size:12px;line-height:1.3;font-weight:700;color:var(--ink);margin:5px 0 0}
+.empty-cta{white-space:pre-line}
+@media(max-height:600px){.hunt-progress{padding:6px 9px}.hunt-rule strong{font-size:12px}.hunt-rule span{font-size:10px}.hunt-progress #huntStatus{font-size:11px;margin-top:3px}}
+@media(max-height:420px){.game-won .result h2{font-size:18px}.game-won .result #resultText{font-size:11px;margin:3px 0}.game-page.game-won .result .reward{font-size:52px}.game-page.game-won .result #resultNote{font-size:15px;line-height:1.2;padding:8px;margin-top:4px}}
 .game-won .game-heading,.game-won .stats,.game-won .progress{display:none}
 .game-page .result .reward{font-size:clamp(80px,15vh,120px)}
 .game-page .result #resultNote{white-space:pre-line;font-size:clamp(20px,3.1vh,25px);font-weight:800;line-height:1.3;color:var(--ink);background:#fff;border:2px solid #bcecf8;border-radius:16px;padding:16px 12px;margin:16px 0 8px;width:100%}

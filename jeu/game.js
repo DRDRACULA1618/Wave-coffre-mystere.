@@ -70,7 +70,7 @@
   }
   async function reveal(){
     $('retryReward').hidden=true;
-    try{const d=await request('/reward',{session});if(!/^\d{2}$/.test(d.reward)||!['left','center','right'].includes(d.position))throw new Error('Indice indisponible.');$('reward').textContent=d.reward;$('result').dataset.position=d.position;$('resultText').textContent='Ton indice est :';$('resultNote').textContent='Fais une capture d’écran de cet indice.\nPuis scanne le prochain QR code.';}
+    try{const d=await request('/reward',{session});if(!/^\d{2}$/.test(d.reward)||!['left','center','right'].includes(d.position))throw new Error('Indice indisponible.');$('reward').textContent=d.reward;$('result').dataset.position=d.position;$('resultText').textContent='Ton indice est :';const found=window.WaveHunt?.record(d.position)||0;$('resultNote').textContent=found===3?'Fais une capture d’écran de cet indice.\nTes 3 indices sont réunis : rejoins le coffre !':'Fais une capture d’écran de cet indice.\nPuis scanne le prochain QR code.';}
     catch{$('resultText').textContent='Défi réussi, ton indice est conservé quelques minutes.';$('resultNote').textContent='Vérifie ta connexion puis réessaie de l’afficher.';$('retryReward').hidden=false;}
   }
   async function win(){state='won';document.body.classList.add('game-won');$('shoot').disabled=true;$('play').hidden=true;$('result').hidden=false;$('resultNote').textContent='Ton indice arrive…';WaveUI.win();WaveUI.confetti();if(practice){$('resultText').textContent='Entraînement réussi !';$('resultNote').textContent='L’indice sera révélé ici lorsque le jeu sera activé.';$('result').dataset.position='center';}else await reveal();}
