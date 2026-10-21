@@ -17,6 +17,8 @@
   const next=document.getElementById('emptyNext');
   if(next)next.textContent=found===3?'Tu as les 3 indices !\nRejoins le coffre.':'Scanne le prochain\nQR code !';
   const note=document.getElementById('resultNote'),result=document.getElementById('result'),reward=document.getElementById('reward');
+  const progress=document.getElementById('resultProgress');
+  if(progress)progress.textContent=found===3?'Tes 3 indices sont réunis !':found===0?'3 indices différents à réunir.':'Tu as réuni '+found+' '+(found===1?'indice':'indices')+' sur 3.\nEncore '+remaining+' à trouver.';
   if(note&&result&&!result.hidden&&/^\d{2}$/.test(reward?.textContent||''))note.textContent=found===3?'Fais une capture d’écran de cet indice.\nTes 3 indices sont réunis : rejoins le coffre !':'Fais une capture d’écran de cet indice.\nPuis scanne le prochain QR code.';
  }
  function record(position){

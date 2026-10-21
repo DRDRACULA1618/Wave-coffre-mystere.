@@ -138,3 +138,32 @@ body.empty-page{height:100vh;height:100dvh;min-height:0;display:flex;align-items
  .empty-page .bad-luck .mascot{height:55px}.empty-page .bad-luck h1{font-size:23px;margin:8px 0}
  .empty-page .bad-luck .empty-cta{font-size:22px;padding:9px;margin-top:8px}
 }
+
+/* Le contexte de l’indice reste dans la capture de l’écran de victoire. */
+.game-won .hunt-progress{display:none}
+.game-page #mode{font-size:12px;font-weight:700}
+.game-page.game-won .result{padding:12px 10px 78px;gap:3px}
+.game-page.game-won .result h2{font-size:24px;line-height:1.15}
+.game-page.game-won .result #resultRule{font-size:17px;line-height:1.25;font-weight:700;color:var(--ink);margin:6px 0}
+.game-page.game-won .result #resultText{font-size:12px;margin:4px 0}
+.game-page.game-won .result .reward{font-size:clamp(72px,13vh,104px);line-height:1.05}
+.game-page.game-won .result #resultProgress{white-space:pre-line;font-size:17px;line-height:1.25;font-weight:800;color:#007e9f;margin:6px 0}
+.game-page.game-won .result #resultNote{font-size:19px;line-height:1.25;padding:12px 9px;margin:10px 0 4px}
+.game-page.game-won .result .mascot{height:64px;width:52px}
+@media(max-height:480px){
+ .game-page.game-won .result{padding:6px 8px;gap:2px}
+ .game-page.game-won .result h2{font-size:20px;margin:3px 0}
+ .game-page.game-won .result #resultRule{font-size:14px;margin:3px 0}
+ .game-page.game-won .result #resultText{font-size:11px;margin:2px 0}
+ .game-page.game-won .result .reward{font-size:60px}
+ .game-page.game-won .result #resultProgress{font-size:13px;margin:3px 0}
+ .game-page.game-won .result #resultNote{font-size:15px;line-height:1.2;padding:8px;margin:5px 0 0}
+}
+@media(max-height:420px){
+ .game-page.game-won .result h2{font-size:18px}
+ .game-page.game-won .result #resultRule{font-size:12px}
+ .game-page.game-won .result #resultText{font-size:10px}
+ .game-page.game-won .result .reward{font-size:44px}
+ .game-page.game-won .result #resultProgress{font-size:12px}
+ .game-page.game-won .result #resultNote{font-size:13px;padding:6px}
+}

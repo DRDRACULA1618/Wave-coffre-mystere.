@@ -38,7 +38,7 @@ test('mode connecté : la réponse du serveur décide du score et du résultat',
  const fetchFn=async(url,options)=>{calls.push({url,body:JSON.parse(options.body)});if(url.endsWith('/reward'))return Response.json({reward:'42',position:'right'});const d={session:'test',score:url.endsWith('/session')?0:++seq,seq,phase:0,target:.3,startedAt:1900000000000,deadline:1900000015000,serverNow:serverTime,hit:true};return Response.json(d);};
  const g=game('?id=C','https://service.test',fetchFn);await g.get('start').onclick();assert.equal(calls[0].body.ref,'C');
  for(let n=0;n<13;n++){serverTime=g.time();await g.get('shoot').onclick();g.step(350);g.step(50);}
- await new Promise(r=>setTimeout(r,0));assert.equal(g.get('score').textContent,'13 / 13');assert.equal(g.get('reward').textContent,'42');assert.equal(g.get('result').dataset.position,'right');assert.match(g.get('resultNote').textContent,/capture d’écran/);assert.match(g.get('resultNote').textContent,/prochain QR code/);assert.equal(calls.filter(c=>c.url.endsWith('/reward')).length,1);assert.ok(calls.filter(c=>c.url.endsWith('/shot')).every(c=>!('score' in c.body)));
+ await new Promise(r=>setTimeout(r,0));assert.equal(g.get('score').textContent,'13 / 13');assert.equal(g.get('reward').textContent,'42');assert.equal(g.get('result').dataset.position,'center');assert.equal(g.get('resultTitle').textContent,'Tu as trouvé un indice !');assert.match(g.get('resultProgress').textContent,/réuni 1 indice sur 3/);assert.match(g.get('resultProgress').textContent,/Encore 2/);assert.match(g.get('resultNote').textContent,/capture d’écran/);assert.match(g.get('resultNote').textContent,/prochain QR code/);assert.equal(calls.filter(c=>c.url.endsWith('/reward')).length,1);assert.ok(calls.filter(c=>c.url.endsWith('/shot')).every(c=>!('score' in c.body)));
 });
 test('un lien neutre attend sa résolution et lance une partie avec son jeton, même si id est modifié',async()=>{
  const calls=[];
@@ -80,5 +80,5 @@ test('un indice est compté après sa révélation réussie, et le troisième te
  for(let n=0;n<13;n++){await g.get('shoot').onclick();g.step(180);}
  await new Promise(r=>setTimeout(r,0));assert.equal(g.get('retryReward').hidden,false);assert.equal(recorded.length,0);
  await g.get('retryReward').onclick();assert.deepEqual(recorded,['right']);assert.equal(g.get('reward').textContent,'42');
- assert.match(g.get('resultNote').textContent,/3 indices.*coffre/);assert.doesNotMatch(g.get('resultNote').textContent,/prochain QR/);
+ assert.match(g.get('resultNote').textContent,/3 indices.*coffre/);assert.doesNotMatch(g.get('resultNote').textContent,/prochain QR/);assert.equal(g.get('resultProgress').textContent,'Tes 3 indices sont réunis !');
 });
