@@ -57,7 +57,7 @@ Chaque participant dispose de deux combinaisons complètes. Après deux erreurs,
 
 ## Protection et limites
 
-Les indices sont conservés dans les secrets Cloudflare, et le serveur compte les tirs avec un délai minimal et une limite de 15 secondes. Un joueur ne peut pas simplement envoyer « score : 13 ». Les appuis peuvent être automatisés : ce système vise une protection légère pour une animation, pas une compétition anti-triche.
+Les indices sont conservés dans les secrets Cloudflare, et le serveur compte les tirs avec un délai minimal et une limite de 15, 13 ou 11 secondes selon le jeu. Un joueur ne peut pas simplement envoyer « score : 13 ». Les appuis peuvent être automatisés : ce système vise une protection légère pour une animation, pas une compétition anti-triche.
 
 Le clavier est volontairement autonome. L’empreinte de la combinaison évite une lecture immédiate du code, mais elle peut être testée par recherche exhaustive. Utiliser l’appareil surveillé par l’équipe. L’animation n’actionne aucune serrure physique.
 
@@ -73,7 +73,7 @@ Le clavier et la victoire utilisent la hauteur dynamique du navigateur (Safari e
 
 ## Difficulté du défi
 
-L’objectif reste 13 paniers en 15 secondes. Chaque tir accepté compte désormais comme un panier, sans précision de visée ni timing à respecter. Le bouton Tirer se réactive après une animation de 160 ms ; le délai local minimal est de 180 ms et le serveur impose un minimum de 150 ms. La jauge de visée est masquée et les consignes invitent simplement à appuyer sur Tirer. Le score reste vérifié par Cloudflare, avec un seul panier par tir, et aucun indice avant 13 paniers.
+L’objectif reste 13 paniers. Le temps diminue : jeu 1 / A = 15 secondes, jeu 2 / B = 13 secondes, jeu 3 / C = 11 secondes. Cloudflare impose la durée de la session et le client affiche cette valeur avant le démarrage. Les parties déjà créées avant cette mise à jour conservent leurs 15 secondes. Chaque tir accepté compte désormais comme un panier, sans précision de visée ni timing à respecter. Le bouton Tirer se réactive après une animation de 160 ms ; le délai local minimal est de 180 ms et le serveur impose un minimum de 150 ms. La jauge de visée est masquée et les consignes invitent simplement à appuyer sur Tirer. Le score reste vérifié par Cloudflare, avec un seul panier par tir, et aucun indice avant 13 paniers.
 
 Le jeu utilise la hauteur et la largeur de `visualViewport` quand elles sont disponibles ; le terrain se réduit pour conserver la jauge, le bouton Tirer et le son à l’écran. Les confettis sont plus denses (240 éléments) et visibles 16 secondes.
 
@@ -87,3 +87,8 @@ Toutes les pages utilisent le fichier de logo fourni par l’utilisateur, pingou
 Les quatre QR utilisent désormais des chemins `/s/<identifiant>/` de même longueur. Ces quatre pages HTML sont identiques : aucun chiffre, ordre d’indice ou résultat propre au QR n’est écrit dans leur URL ou dans leur HTML. La résolution `/resolve` et la création `/session` se font en POST auprès de Cloudflare. Le service choisit la référence en fonction du jeton ; une référence fournie en même temps ne peut pas la modifier. Cette présentation évite les spoilers dans la barre d’adresse, sans transformer les liens publics en secrets.
 
 Les anciens `/jeu/?id=A`, `B`, `C` et `/pas-de-chance/` restent présents et demandent au serveur leur adresse neutre, puis utilisent `location.replace` pour ne pas conserver une étape supplémentaire dans l’historique. L’accueil et `/coffre/` restent disponibles. Ne pas supprimer les anciens chemins : des QR peuvent déjà être imprimés.
+
+
+## Consignes de la chasse
+
+La page sans indice affiche en grand « Pas de chance cette fois ! » puis « Scanne le prochain QR code ! ». Après une victoire, l’indice et la consigne « Fais une capture d’écran de cet indice. Puis scanne le prochain QR code. » sont agrandis. Les statistiques du jeu disparaissent à la victoire pour laisser la place à la consigne sur mobile. Les affiches invitent à scanner avec l’appareil photo pour tenter de remporter la cagnotte mystère.

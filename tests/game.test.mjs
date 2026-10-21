@@ -11,7 +11,7 @@ function game(search='?id=A',apiUrl='',fetchFn,pathname='/jeu/'){
  const FakeDate=class extends Date{static now(){return time;}};
  const math=Object.create(Math);math.random=()=>0;
  class LoadedImage{constructor(){this.naturalWidth=1046;this.naturalHeight=1503;}set src(value){this.url=value;this.onload?.();}}
- const sandbox={Image:LoadedImage,document:{getElementById:get,querySelectorAll:()=>dots,addEventListener(){},body:{classList:{remove(){}}}},location:{search,pathname},window:{WAVE_CONFIG:{apiUrl}},URLSearchParams,performance:{now:()=>time},Date:FakeDate,Math:math,AbortSignal,fetch:fetchFn,requestAnimationFrame:f=>frame=f,WaveUI:{tone(){},shootSound(){},basketSound(){},missSound(){},isSoundEnabled:()=>true,disableSound(){},win(){},confetti(){},enableSound:async()=>true}};
+ const sandbox={Image:LoadedImage,document:{getElementById:get,querySelectorAll:()=>dots,addEventListener(){},body:{classList:{remove(){},add(){}}}},location:{search,pathname},window:{WAVE_CONFIG:{apiUrl}},URLSearchParams,performance:{now:()=>time},Date:FakeDate,Math:math,AbortSignal,fetch:fetchFn,requestAnimationFrame:f=>frame=f,WaveUI:{tone(){},shootSound(){},basketSound(){},missSound(){},isSoundEnabled:()=>true,disableSound(){},win(){},confetti(){},enableSound:async()=>true}};
  vm.runInNewContext(fs.readFileSync(new URL('../jeu/game.js',import.meta.url),'utf8'),sandbox);
  return {get,step(ms){time+=ms;frame(time);},advance(ms){time+=ms;},time:()=>time};
 }
@@ -38,7 +38,7 @@ test('mode connecté : la réponse du serveur décide du score et du résultat',
  const fetchFn=async(url,options)=>{calls.push({url,body:JSON.parse(options.body)});if(url.endsWith('/reward'))return Response.json({reward:'42',position:'right'});const d={session:'test',score:url.endsWith('/session')?0:++seq,seq,phase:0,target:.3,startedAt:1900000000000,deadline:1900000015000,serverNow:serverTime,hit:true};return Response.json(d);};
  const g=game('?id=C','https://service.test',fetchFn);await g.get('start').onclick();assert.equal(calls[0].body.ref,'C');
  for(let n=0;n<13;n++){serverTime=g.time();await g.get('shoot').onclick();g.step(350);g.step(50);}
- await new Promise(r=>setTimeout(r,0));assert.equal(g.get('score').textContent,'13 / 13');assert.equal(g.get('reward').textContent,'42');assert.equal(g.get('result').dataset.position,'right');assert.equal(calls.filter(c=>c.url.endsWith('/reward')).length,1);assert.ok(calls.filter(c=>c.url.endsWith('/shot')).every(c=>!('score' in c.body)));
+ await new Promise(r=>setTimeout(r,0));assert.equal(g.get('score').textContent,'13 / 13');assert.equal(g.get('reward').textContent,'42');assert.equal(g.get('result').dataset.position,'right');assert.match(g.get('resultNote').textContent,/capture d’écran/);assert.match(g.get('resultNote').textContent,/prochain QR code/);assert.equal(calls.filter(c=>c.url.endsWith('/reward')).length,1);assert.ok(calls.filter(c=>c.url.endsWith('/shot')).every(c=>!('score' in c.body)));
 });
 test('un lien neutre attend sa résolution et lance une partie avec son jeton, même si id est modifié',async()=>{
  const calls=[];
@@ -57,4 +57,15 @@ test('la résolution interrompue peut être relancée sans démarrer de chronom�
  let attempts=0;const g=game('','https://service.test',async()=>{if(!attempts++)throw Error('Hors ligne');return Response.json({kind:'game',token:'tfn3j5u4'});},'/s/tfn3j5u4/');
  await new Promise(r=>setTimeout(r,0));assert.match(g.get('coverTitle').textContent,/indisponible/);assert.equal(g.get('start').disabled,false);
  await g.get('start').onclick();assert.equal(attempts,2);assert.equal(g.get('start').textContent,'Commencer le défi');assert.equal(g.get('shoot').disabled,true);
+});
+test('chaque QR affiche sa durée avant le départ puis expire selon la session serveur',async()=>{
+ for(const [token,duration] of [['tfn3j5u4',15000],['vgyx24v5',13000],['emhvcxu4',11000]]){
+  const startedAt=1900000000000;
+  const fetchFn=async(url)=>Response.json(url.endsWith('/resolve')?{token,kind:'game',duration}:{session:'test',score:0,seq:0,phase:0,target:.5,startedAt,duration,deadline:startedAt+duration,serverNow:startedAt});
+  const g=game('','https://service.test',fetchFn,'/s/'+token+'/');await new Promise(r=>setTimeout(r,0));
+  assert.equal(g.get('timer').textContent,'00:'+duration/1000);assert.equal(g.get('challengeTitle').textContent,'13 paniers. '+duration/1000+' secondes.');
+  assert.match(g.get('coverText').textContent,new RegExp(duration/1000+' secondes'));
+  await g.get('start').onclick();g.step(duration-1);assert.equal(g.get('shoot').disabled,false);
+  g.step(1);assert.equal(g.get('shoot').disabled,true);assert.match(g.get('coverTitle').textContent,/écoulé/);
+ }
 });

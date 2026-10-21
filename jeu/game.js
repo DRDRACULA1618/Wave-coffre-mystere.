@@ -7,6 +7,7 @@
   // Vue de dos : la nageoire droite est à droite de l’écran.
   const BALL_START={x:246,y:278,r:16};
   const GAME={goal:13,duration:15000,aimSpeed:300,hitRadius:.45,shotCooldown:180,flightDuration:120,flightEnd:160};
+  let duration=({A:15000,B:13000,C:11000})[ref]||GAME.duration;
   let state='ready',score=0,phase=0,target=.5,epoch=0,deadline=0,flight=null,lastShot=-Infinity,session='',seq=0,clockOffset=0,pending=false;
   const practice=!api&&!token,now=()=>Date.now()+clockOffset;
   let valid=!token&&['A','B','C'].includes(ref),resolved=!token;
@@ -25,7 +26,14 @@
     if(typeof data.serverNow==='number')clockOffset=data.serverNow-(before+Date.now())/2;
     return data;
   }
-  function accept(d){score=d.score;seq=d.seq;phase=d.phase;target=d.target;epoch=d.startedAt;deadline=d.deadline;}
+  function setDuration(value){
+    if(![15000,13000,11000].includes(value))throw new Error('Durée du défi indisponible. Réessaie.');
+    duration=value;
+    $('challengeTitle').textContent='13 paniers. '+duration/1000+' secondes.';
+    if(state!=='playing')$('timer').textContent='00:'+String(duration/1000).padStart(2,'0');
+    $('coverText').textContent='Appuie sur « Tirer ! » : chaque tir compte. Marque 13 paniers en '+duration/1000+' secondes.';
+  }
+  function accept(d){score=d.score;seq=d.seq;phase=d.phase;target=d.target;epoch=d.startedAt;deadline=d.deadline;setDuration(d.duration||d.deadline-d.startedAt);}
   function aim(t){return .5+.44*Math.sin((t-epoch)/GAME.aimSpeed+phase);}
   function stats(){const s=Math.max(0,Math.ceil((deadline-now())/1000));$('score').textContent=score+' / '+GAME.goal;if(state==='playing'){$('timer').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');if(s>0&&s<=3&&s!==lastCountdown){lastCountdown=s;WaveUI.tone(620,.045,.015);}}$('timerBox').classList.toggle('urgent',state==='playing'&&s<=5);document.querySelectorAll('.progress i').forEach((d,i)=>d.classList.toggle('on',i<score));}
   function fail(title,text){state='lost';flight=null;pending=false;$('shoot').disabled=true;$('cover').hidden=false;$('coverTitle').textContent=title;$('coverText').textContent=text;$('start').textContent='Réessayer';$('start').disabled=false;}
@@ -34,7 +42,7 @@
     if(!mascotReady||!valid||state==='starting'||state==='playing')return;state='starting';$('start').disabled=true;$('coverText').textContent='Prépare-toi…';
     if(!soundOptOut)WaveUI.enableSound().then(ok=>{if(soundOptOut){WaveUI.disableSound();return;}$('sound').textContent=ok?'Son : activé':'Activer le son';if(!ok)soundOptOut=true;});
     try{
-      if(practice){clockOffset=0;epoch=Date.now();deadline=epoch+GAME.duration;phase=Math.random()*6;target=.5;score=0;seq=0;}
+      if(practice){clockOffset=0;epoch=Date.now();deadline=epoch+duration;phase=Math.random()*6;target=.5;score=0;seq=0;}
       else{const d=await request('/session',token?{token}:{ref});session=d.session;accept(d);}
       flight=null;lastShot=-Infinity;lastCountdown=-1;pending=false;state='playing';$('feedback').textContent='';$('cover').hidden=true;$('shoot').disabled=false;$('start').disabled=false;stats();
     }catch(e){fail('Connexion indisponible',e.message);}
@@ -48,11 +56,12 @@
       resolved=true;$('loadingCard').hidden=true;
       if(d.kind==='empty'){
         state='empty';$('gameCard').hidden=true;$('emptyCard').hidden=false;
-        document.body.classList.remove('game-page');
+        document.body.classList.remove('game-page');document.body.classList.add('empty-page');
         return;
       }
+      setDuration(d.duration||GAME.duration);
       valid=true;$('gameCard').hidden=false;$('mode').textContent='';
-      $('coverTitle').textContent='À toi de jouer !';$('coverText').textContent='Appuie sur « Tirer ! » : chaque tir compte. Marque 13 paniers en 15 secondes.';
+      $('coverTitle').textContent='À toi de jouer !';
       $('start').textContent='Commencer le défi';$('start').disabled=!mascotReady;state='ready';
     }catch(e){
       $('loadingCard').hidden=true;$('gameCard').hidden=false;
@@ -61,10 +70,10 @@
   }
   async function reveal(){
     $('retryReward').hidden=true;
-    try{const d=await request('/reward',{session});if(!/^\d{2}$/.test(d.reward)||!['left','center','right'].includes(d.position))throw new Error('Indice indisponible.');$('reward').textContent=d.reward;$('result').dataset.position=d.position;$('resultText').textContent='Ton indice est :';$('resultNote').textContent='Garde cet écran et poursuis la chasse !';}
+    try{const d=await request('/reward',{session});if(!/^\d{2}$/.test(d.reward)||!['left','center','right'].includes(d.position))throw new Error('Indice indisponible.');$('reward').textContent=d.reward;$('result').dataset.position=d.position;$('resultText').textContent='Ton indice est :';$('resultNote').textContent='Fais une capture d’écran de cet indice.\nPuis scanne le prochain QR code.';}
     catch{$('resultText').textContent='Défi réussi, ton indice est conservé quelques minutes.';$('resultNote').textContent='Vérifie ta connexion puis réessaie de l’afficher.';$('retryReward').hidden=false;}
   }
-  async function win(){state='won';$('shoot').disabled=true;$('play').hidden=true;$('result').hidden=false;WaveUI.win();WaveUI.confetti();if(practice){$('resultText').textContent='Entraînement réussi !';$('resultNote').textContent='L’indice sera révélé ici lorsque le jeu sera activé.';$('result').dataset.position='center';}else await reveal();}
+  async function win(){state='won';document.body.classList.add('game-won');$('shoot').disabled=true;$('play').hidden=true;$('result').hidden=false;$('resultNote').textContent='Ton indice arrive…';WaveUI.win();WaveUI.confetti();if(practice){$('resultText').textContent='Entraînement réussi !';$('resultNote').textContent='L’indice sera révélé ici lorsque le jeu sera activé.';$('result').dataset.position='center';}else await reveal();}
   async function shoot(){
     if(state!=='playing'||flight||pending||now()-lastShot<GAME.shotCooldown)return;
     if(now()>=deadline){fail('Le temps est écoulé !','Tu as marqué '+score+' panier(s) sur '+GAME.goal+'. Retente le défi !');return;}
@@ -107,5 +116,6 @@
   $('sound').onclick=async()=>{if(!soundOptOut){soundOptOut=true;WaveUI.disableSound();$('sound').textContent='Son : coupé';}else{const enabled=await WaveUI.enableSound();soundOptOut=!enabled;$('sound').textContent=enabled?'Son : activé':'Activer le son';}};
   document.addEventListener('keydown',e=>{if(e.code==='Space'&&!e.repeat&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&e.target.tagName!=='BUTTON'&&state==='playing'){e.preventDefault();shoot();}});
   requestAnimationFrame(frame);
+  if(!token)setDuration(duration);
   if(token)resolveScan();
 })();
