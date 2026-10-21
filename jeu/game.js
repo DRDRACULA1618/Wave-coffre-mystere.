@@ -76,7 +76,7 @@
       $('reward').textContent=d.reward;$('result').dataset.position='center';
       $('resultTitle').textContent='Tu as trouvé un indice !';$('resultText').textContent='Ton bloc de 2 chiffres :';
       const found=window.WaveHunt?.record(d.position)||1;
-      $('resultProgress').textContent=found===3?'Tes 3 indices sont réunis !':'Tu as réuni '+found+' '+(found===1?'indice':'indices')+' sur 3.\nEncore '+(3-found)+' à trouver.';
+      $('resultProgress').textContent=found===3?'Tu as réuni les 3 indices pour trouver le code à 6 chiffres !':'Tu as réuni '+found+' '+(found===1?'indice':'indices')+' sur 3. Encore '+(3-found)+' '+(found===2?'autre':'autres')+' pour trouver le code à 6 chiffres.';
       $('resultNote').textContent=found===3?'Fais une capture d’écran de cet indice.\nTes 3 indices sont réunis : rejoins le coffre !':'Fais une capture d’écran de cet indice.\nPuis scanne le prochain QR code.';
     }
     catch{$('resultText').textContent='Défi réussi, ton indice est conservé quelques minutes.';$('resultNote').textContent='Vérifie ta connexion puis réessaie de l’afficher.';$('retryReward').hidden=false;}

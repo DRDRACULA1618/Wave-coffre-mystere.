@@ -22,7 +22,7 @@ test('les quatre pages neutres ont le même HTML et leurs ressources se résolve
  const pages=tokens.map(token=>fs.readFileSync(new URL('s/'+token+'/index.html',root),'utf8'));
  assert.equal(new Set(pages).size,1);
  const doc=pages[0];assert.match(doc,/<base href="\.\.\/\.\.\/jeu\/">/);
- assert.match(doc,/3 indices à réunir pour trouver le code à 6 chiffres/);assert.match(doc,/id="resultProgress"/);assert.doesNotMatch(doc,/premier indice|deuxième indice|troisième indice|indiquant la position du bloc/i);
+ assert.doesNotMatch(doc,/id="resultRule"/);assert.match(doc,/id="resultProgress"/);assert.doesNotMatch(doc,/premier indice|deuxième indice|troisième indice|indiquant la position du bloc/i);
  for(const [_,src] of doc.matchAll(/(?:src|href)="([^"]+)"/g)){
   if(src==='../../jeu/')continue;
   const path=new URL(src,new URL('jeu/',root));path.search='';assert.ok(fs.existsSync(path),path.href);

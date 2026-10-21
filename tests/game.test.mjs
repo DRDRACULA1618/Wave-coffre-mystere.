@@ -80,5 +80,5 @@ test('un indice est compté après sa révélation réussie, et le troisième te
  for(let n=0;n<13;n++){await g.get('shoot').onclick();g.step(180);}
  await new Promise(r=>setTimeout(r,0));assert.equal(g.get('retryReward').hidden,false);assert.equal(recorded.length,0);
  await g.get('retryReward').onclick();assert.deepEqual(recorded,['right']);assert.equal(g.get('reward').textContent,'42');
- assert.match(g.get('resultNote').textContent,/3 indices.*coffre/);assert.doesNotMatch(g.get('resultNote').textContent,/prochain QR/);assert.equal(g.get('resultProgress').textContent,'Tes 3 indices sont réunis !');
+ assert.match(g.get('resultNote').textContent,/3 indices.*coffre/);assert.doesNotMatch(g.get('resultNote').textContent,/prochain QR/);assert.equal(g.get('resultProgress').textContent,'Tu as réuni les 3 indices pour trouver le code à 6 chiffres !');
 });

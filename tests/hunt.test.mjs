@@ -16,7 +16,7 @@ test('chaque indice unique est compté une seule fois et le suivi est retrouvé 
  const a=hunt();assert.equal(a.tracker.count(),0);assert.match(a.get('huntStatus').textContent,/encore 3/);
  assert.equal(a.tracker.record('left'),1);assert.equal(a.tracker.record('left'),1);assert.match(a.get('huntStatus').textContent,/1\/3 indice trouvé — encore 2/);assert.match(a.get('resultProgress').textContent,/réuni 1 indice sur 3/);
  const b=hunt(a.storage);assert.equal(b.tracker.count(),1);assert.equal(b.tracker.record('center'),2);assert.match(b.get('huntStatus').textContent,/encore 1/);
- assert.equal(b.tracker.record('right'),3);assert.match(b.get('huntStatus').textContent,/3\/3.*Rejoins le coffre/);assert.match(b.get('emptyNext').textContent,/Rejoins le coffre/);assert.equal(b.get('resultProgress').textContent,'Tes 3 indices sont réunis !');
+ assert.equal(b.tracker.record('right'),3);assert.match(b.get('huntStatus').textContent,/3\/3.*Rejoins le coffre/);assert.match(b.get('emptyNext').textContent,/Rejoins le coffre/);assert.equal(b.get('resultProgress').textContent,'Tu as réuni les 3 indices pour trouver le code à 6 chiffres !');
  assert.deepEqual(JSON.parse(a.storage.get(key)).sort(),['center','left','right']);
 });
 test('la lecture seule et une page sans indice ne font pas avancer le compteur ; les valeurs invalides sont ignorées',()=>{
