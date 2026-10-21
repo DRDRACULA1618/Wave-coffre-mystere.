@@ -1,9 +1,12 @@
 const GOAL=13,DURATION=15000,MIN_SHOT_INTERVAL=150;
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
 const positions={A:'left',B:'center',C:'right'};
+const durations=Object.freeze({A:15000,B:13000,C:11000});
 // Identifiants d'accès neutres : leur signification n'est jamais envoyée dans une URL.
 const scanRoutes=Object.freeze({tfn3j5u4:'A',vgyx24v5:'B',emhvcxu4:'C','4ubsj88k':'empty'});
-const snapshot=(s,now)=>({score:s.score,seq:s.seq,phase:s.phase,target:s.target,startedAt:s.startedAt,deadline:s.startedAt+DURATION,serverNow:now});
+// Les parties déjà ouvertes avant cette mise à jour gardent leurs quinze secondes.
+const sessionDuration=s=>s.duration??DURATION;
+const snapshot=(s,now)=>({score:s.score,seq:s.seq,phase:s.phase,target:s.target,startedAt:s.startedAt,duration:sessionDuration(s),deadline:s.startedAt+sessionDuration(s),serverNow:now});
 
 export default {
  async fetch(request,env){
@@ -25,7 +28,8 @@ export default {
     let token=body.token;
     if(Object.hasOwn(body,'legacy'))token=Object.keys(scanRoutes).find(k=>scanRoutes[k]===body.legacy);
     if(typeof token!=='string'||!Object.hasOwn(scanRoutes,token))return respond(json({error:'QR code inconnu.'},400));
-    return respond(json({token,kind:scanRoutes[token]==='empty'?'empty':'game'}));
+    const ref=scanRoutes[token];
+    return respond(json(ref==='empty'?{token,kind:'empty'}:{token,kind:'game',duration:durations[ref]}));
    }
    let rewards;try{rewards=JSON.parse(env.REWARDS_JSON);}catch{return respond(json({error:'Le jeu sera bientôt disponible.'},503));}
    if(!Object.keys(positions).every(k=>/^\d{2}$/.test(rewards?.[k])))return respond(json({error:'Le jeu sera bientôt disponible.'},503));
@@ -67,7 +71,7 @@ export class GameSession {
   if(path==='/start'){
    if(!Object.hasOwn(positions,body.ref))return json({error:'QR code inconnu.'},400);
    if(await store.get('game'))return json({error:'Partie déjà créée.'},409);
-   const s={ref:body.ref,startedAt:now,score:0,seq:0,phase:Math.random()*Math.PI*2,target:.5,lastShot:0,lastResponse:null};
+   const s={ref:body.ref,duration:durations[body.ref],startedAt:now,score:0,seq:0,phase:Math.random()*Math.PI*2,target:.5,lastShot:0,lastResponse:null};
    await store.put('game',s);await store.setAlarm(now+600000);return json(snapshot(s,now));
   }
   const s=await store.get('game');if(!s||now>s.startedAt+600000)return json({error:'Cette partie a expiré. Relance le défi.'},410);
@@ -79,9 +83,9 @@ export class GameSession {
   if(path!=='/shot')return json({error:'Adresse inconnue.'},404);
   if(!Number.isInteger(body.seq))return json({error:'Tir invalide.'},400);
   // Réessayer un appel ne peut jamais compter deux fois le même tir.
-  if(body.seq===s.seq-1&&s.lastResponse)return json(s.lastResponse);
+  if(body.seq===s.seq-1&&s.lastResponse)return json({...s.lastResponse,duration:sessionDuration(s),deadline:s.startedAt+sessionDuration(s)});
   if(body.seq!==s.seq)return json({error:'Tir déjà traité. Relance le défi.'},409);
-  if(now>=s.startedAt+DURATION)return json({error:'Le temps est écoulé.'},410);
+  if(now>=s.startedAt+sessionDuration(s))return json({error:'Le temps est écoulé.'},410);
   if(s.score>=GOAL)return json({error:'Défi déjà terminé.'},409);
   if(s.lastShot&&now-s.lastShot<MIN_SHOT_INTERVAL)return json({error:'Attends la fin du tir.'},429);
   // Défi accessible : chaque tir accepté marque, sans test de visée.
