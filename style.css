@@ -168,15 +168,15 @@ body.empty-page{height:100vh;height:100dvh;min-height:0;display:flex;align-items
  .game-page.game-won .result #resultNote{font-size:13px;padding:6px}
 }
 
-/* Les trois PNG représentent le nombre d’indices réunis, jamais leur ordre. */
+/* Le PNG en couleur repère la place du bloc dans la combinaison. */
 .game-page.game-won .result{padding:14px 10px;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly}
 .game-page.game-won .result h2{font-size:18px;letter-spacing:2px;margin:6px 0}
 .game-page.game-won .result .reward{font-size:clamp(84px,20dvh,150px);letter-spacing:-4px}
 .clue-penguins{display:flex;justify-content:center;align-items:center;gap:16px;margin:10px 0;width:100%}
 .clue-penguins img{width:clamp(40px,17vw,72px);height:clamp(44px,12dvh,98px);object-fit:contain;opacity:.18}
-.result[data-found="1"] .clue-penguins img:first-child,
-.result[data-found="2"] .clue-penguins img:nth-child(-n+2),
-.result[data-found="3"] .clue-penguins img{opacity:1}
+.result[data-position="left"] .clue-penguins img:first-child,
+.result[data-position="center"] .clue-penguins img:nth-child(2),
+.result[data-position="right"] .clue-penguins img:last-child{opacity:1}
 .game-page.game-won .result #resultNote{background:var(--pale);width:100%}
 @media(max-height:540px){
  .game-page.game-won .result{padding:6px 8px;gap:2px}
@@ -192,3 +192,15 @@ body.empty-page{height:100vh;height:100dvh;min-height:0;display:flex;align-items
  .game-page.game-won .result #resultProgress{font-size:11px}
  .game-page.game-won .result #resultNote{font-size:12px;padding:5px}
 }
+
+.puzzle-mode .arena{display:grid;place-items:center;background:#e5f8ff;container-type:size}
+.puzzle-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:3px;width:min(100%,calc(var(--game-viewport-height,100dvh) - 330px));aspect-ratio:1;background:white;border-radius:10px;overflow:hidden;max-height:100%}
+@supports(width:1cqw){.puzzle-board{width:min(100cqw,100cqh);height:min(100cqw,100cqh)}}
+.puzzle-tile{position:relative;display:block;width:100%;height:100%;min-height:0;padding:0;border:2px solid transparent;border-radius:3px;overflow:hidden;background:#e5f8ff;touch-action:manipulation}
+.puzzle-tile img{position:absolute;width:300%;height:300%;max-width:none;object-fit:contain;pointer-events:none;user-select:none}
+.puzzle-tile.placed{border-color:#8fdacb}.puzzle-tile.selected{border-color:#ef8f16;box-shadow:inset 0 0 0 2px #ef8f16}
+.puzzle-tile:disabled{opacity:1}.puzzle-tile:focus-visible{outline:3px solid #ef8f16;outline-offset:-4px;z-index:1}
+.puzzle-model{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:7px;font-size:12px;color:var(--ink)}
+.puzzle-model img{width:36px;height:46px;object-fit:contain}.puzzle-mode #sound{flex:1}
+.puzzle-mode .feedback{display:none}.runner-mode .arena{background:#dff8ff}
+.runner-mode #shoot{font-size:20px}

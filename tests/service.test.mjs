@@ -16,10 +16,10 @@ test('une session ne révèle aucun indice avant treize paniers calculés par le
  const bad=await api(env,'/reward',{session:s.session,score:13});assert.equal(bad.status,403);
  const object=objects.get('game:'+s.session),saved=await object.ctx.storage.get('game');assert.equal(saved.score,0);
 });
-test('les trois références renvoient chacune leur réponse après treize tirs dans leur durée, sans double comptage',async()=>{
+test('le basket renvoie son indice après treize tirs dans sa durée, sans double comptage',async()=>{
  const {env,objects}=setup(),realNow=Date.now;let time=1900000000000;Date.now=()=>time;
  try{
-  for(const [ref,expected] of Object.entries(rewards)){
+  for(const [ref,expected] of [['A',rewards.A]]){
    const s=await (await api(env,'/session',{ref})).json();
    assert.equal(s.duration,{A:15000,B:13000,C:11000}[ref]);
    for(let seq=0;seq<13;seq++){
@@ -38,12 +38,12 @@ test('les trois références renvoient chacune leur réponse après treize tirs 
 test('chaque tir accepté marque, avec délai entre tirs et expiration toujours imposés',async()=>{
  const {env,objects}=setup(),realNow=Date.now;let time=1900000000000;Date.now=()=>time;
  try{
-  const s=await (await api(env,'/session',{ref:'B'})).json(),obj=objects.get('game:'+s.session),state=await obj.ctx.storage.get('game');
+  const s=await (await api(env,'/session',{ref:'A'})).json(),obj=objects.get('game:'+s.session),state=await obj.ctx.storage.get('game');
   time+=180;
   const shot=await (await api(env,'/shot',{session:s.session,seq:0})).json();assert.equal(shot.hit,true);assert.equal(shot.score,1);
   assert.equal((await api(env,'/shot',{session:s.session,seq:1})).status,429);
   assert.equal((await api(env,'/shot',{session:s.session,seq:2})).status,409);
-  time=state.startedAt+13000;assert.equal((await api(env,'/shot',{session:s.session,seq:1})).status,410);
+  time=state.startedAt+15000;assert.equal((await api(env,'/shot',{session:s.session,seq:1})).status,410);
   await obj.alarm();assert.equal((await api(env,'/reward',{session:s.session})).status,410);
  }finally{Date.now=realNow;}
 });
@@ -80,7 +80,7 @@ test('les nouveaux identifiants et les anciens liens se résolvent sans transmet
  for(const [legacy,token] of Object.entries({A:'tfn3j5u4',B:'vgyx24v5',C:'emhvcxu4',empty:'4ubsj88k'})){
   for(const body of [{token},{legacy}]){
    const r=await api(env,'/resolve',body);assert.equal(r.status,200);
-   assert.deepEqual(await r.json(),legacy==='empty'?{token,kind:'empty'}:{token,kind:'game',duration:{A:15000,B:13000,C:11000}[legacy]});
+   assert.deepEqual(await r.json(),legacy==='empty'?{token,kind:'empty'}:{token,kind:'game',duration:{A:15000,B:30000,C:30000}[legacy],activity:{A:'basket',B:'puzzle',C:'runner'}[legacy]});
   }
  }
  for(const body of [{token:'toString'},{token:'xxxxxxxx'},{legacy:'toString'},{}])assert.equal((await api(env,'/resolve',body)).status,400);
@@ -89,7 +89,7 @@ test('les nouveaux identifiants et les anciens liens se résolvent sans transmet
 test('la durée propre au QR est imposée par le serveur, même si le client en propose une autre',async()=>{
  const {env}=setup(),realNow=Date.now;let time=1900000000000;Date.now=()=>time;
  try{
-  for(const [ref,token,duration] of [['A','tfn3j5u4',15000],['B','vgyx24v5',13000],['C','emhvcxu4',11000]]){
+  for(const [ref,token,duration] of [['A','tfn3j5u4',15000]]){
    for(const body of [{ref,duration:999999},{token,ref:'A',duration:999999}]){
     const response=await api(env,'/session',body);assert.equal(response.status,200);
     const s=await response.json();assert.equal(s.duration,duration);assert.equal(s.deadline-s.startedAt,duration);
@@ -105,8 +105,8 @@ test('la durée propre au QR est imposée par le serveur, même si le client en 
 test('une ancienne partie sans durée enregistrée conserve quinze secondes et les mêmes indices',async()=>{
  const {env,objects}=setup(),realNow=Date.now;let time=1900000000000;Date.now=()=>time;
  try{
-  const s=await (await api(env,'/session',{ref:'C'})).json(),obj=objects.get('game:'+s.session),saved=await obj.ctx.storage.get('game');
-  assert.equal(s.duration,11000);delete saved.duration;await obj.ctx.storage.put('game',saved);
+  const s=await (await api(env,'/session',{ref:'A'})).json(),obj=objects.get('game:'+s.session),saved=await obj.ctx.storage.get('game');
+  saved.ref='C';delete saved.duration;await obj.ctx.storage.put('game',saved);
   time=s.startedAt+11000;
   const accepted=await api(env,'/shot',{session:s.session,seq:0});assert.equal(accepted.status,200);
   const shot=await accepted.json();assert.equal(shot.duration,15000);assert.equal(shot.deadline,s.startedAt+15000);assert.equal(shot.score,1);
@@ -117,6 +117,55 @@ test('une ancienne partie sans durée enregistrée conserve quinze secondes et l
   const reward=await (await api(env,'/reward',{session:s.session})).json();assert.equal(reward.reward,rewards.C);
   time=s.startedAt+15000;
   assert.equal((await api(env,'/shot',{session:s.session,seq:13})).status,410);
+ }finally{Date.now=realNow;}
+});
+
+test('le puzzle B vérifie les échanges, les doublons et les neuf pièces avant de révéler son indice',async()=>{
+ const {env}=setup(),realNow=Date.now;let time=1900000000000;Date.now=()=>time;
+ try{
+  const s=await (await api(env,'/session',{token:'vgyx24v5',ref:'A',duration:999999})).json();
+  assert.equal(s.activity,'puzzle');assert.equal(s.duration,30000);assert.equal(s.goal,9);assert.equal(new Set(s.board).size,9);assert.equal(s.score,3);
+  assert.equal((await api(env,'/reward',{session:s.session,score:9,board:[0,1,2,3,4,5,6,7,8]})).status,403);
+  assert.equal((await api(env,'/shot',{session:s.session,seq:0})).status,400);
+  assert.equal((await api(env,'/puzzle',{session:s.session,seq:0,from:-1,to:8})).status,400);
+  assert.equal((await api(env,'/puzzle',{session:s.session,seq:0,from:2,to:2})).status,400);
+  let board=s.board,seq=0;
+  for(let i=0;i<9;i++)if(board[i]!==i){
+   const body={session:s.session,seq,from:i,to:board.indexOf(i)};time+=400;
+   const response=await api(env,'/puzzle',body);assert.equal(response.status,200);const d=await response.json();board=d.board;seq=d.seq;
+   const replay=await (await api(env,'/puzzle',body)).json();assert.deepEqual(replay.board,board);assert.equal(replay.seq,seq);
+  }
+  assert.deepEqual(board,[0,1,2,3,4,5,6,7,8]);
+  const reward=await (await api(env,'/reward',{session:s.session})).json();assert.deepEqual(reward,{reward:rewards.B,position:'center'});
+  const expired=await (await api(env,'/session',{ref:'B'})).json();time=expired.deadline;
+  assert.equal((await api(env,'/puzzle',{session:expired.session,seq:0,from:0,to:1})).status,410);
+  assert.equal((await api(env,'/reward',{session:expired.session,score:9})).status,403);
+ }finally{Date.now=realNow;}
+});
+
+test('la course C dure trente secondes et impose les sauts avant chacun des obstacles',async()=>{
+ const {env}=setup(),realNow=Date.now;let time=1900000000000;Date.now=()=>time;
+ try{
+  const s=await (await api(env,'/session',{token:'emhvcxu4',ref:'A',duration:999999})).json();
+  assert.equal(s.activity,'runner');assert.equal(s.duration,30000);assert.equal(s.goal,7);
+  assert.equal((await api(env,'/reward',{session:s.session,score:13,completed:true})).status,403);
+  assert.equal((await api(env,'/finish',{session:s.session})).status,403);
+  assert.equal((await api(env,'/shot',{session:s.session,seq:0})).status,400);
+  assert.equal((await api(env,'/puzzle',{session:s.session,seq:0,from:0,to:1})).status,400);
+  let seq=0;
+  for(const obstacle of s.obstacles){
+   time=s.startedAt+obstacle-500;const body={session:s.session,seq};
+   const r=await api(env,'/jump',body);assert.equal(r.status,200);const jump=await r.json();seq=jump.seq;
+   const replay=await (await api(env,'/jump',body)).json();assert.deepEqual(replay.jumps,jump.jumps);
+   assert.equal((await api(env,'/jump',{session:s.session,seq})).status,429);
+  }
+  time=s.deadline-1;assert.equal((await api(env,'/finish',{session:s.session})).status,403);
+  time=s.deadline;const done=await api(env,'/finish',{session:s.session});assert.equal(done.status,200);assert.equal((await done.json()).completed,true);
+  assert.deepEqual(await (await api(env,'/reward',{session:s.session})).json(),{reward:rewards.C,position:'right'});
+  const lost=await (await api(env,'/session',{ref:'C'})).json();time=lost.startedAt+lost.obstacles[0]+1;
+  assert.equal((await api(env,'/jump',{session:lost.session,seq:0})).status,410);
+  time=lost.deadline;assert.equal((await api(env,'/finish',{session:lost.session,completed:true})).status,410);
+  assert.equal((await api(env,'/reward',{session:lost.session})).status,403);
  }finally{Date.now=realNow;}
 });
 test('la référence est imposée par le jeton serveur, et le QR sans indice ne peut pas ouvrir de partie',async()=>{

@@ -7,7 +7,8 @@
   // Vue de dos : la nageoire droite est à droite de l’écran.
   const BALL_START={x:246,y:278,r:16};
   const GAME={goal:13,duration:15000,aimSpeed:300,hitRadius:.45,shotCooldown:180,flightDuration:120,flightEnd:160};
-  let duration=({A:15000,B:13000,C:11000})[ref]||GAME.duration;
+  let duration=({A:15000,B:30000,C:30000})[ref]||GAME.duration;
+  let activity='basket',goal=13,puzzle=null,board=[],runner=null,jumps=[];
   let state='ready',score=0,phase=0,target=.5,epoch=0,deadline=0,flight=null,lastShot=-Infinity,session='',seq=0,clockOffset=0,pending=false;
   const practice=!api&&!token,now=()=>Date.now()+clockOffset;
   let valid=!token&&['A','B','C'].includes(ref),resolved=!token;
@@ -27,24 +28,37 @@
     return data;
   }
   function setDuration(value){
-    if(![15000,13000,11000].includes(value))throw new Error('Durée du défi indisponible. Réessaie.');
+    if(![15000,13000,11000,30000].includes(value))throw new Error('Durée du défi indisponible. Réessaie.');
     duration=value;
-    $('challengeTitle').textContent='13 paniers. '+duration/1000+' secondes.';
+    $('challengeTitle').textContent=activity==='puzzle'?'Le puzzle du pingouin':activity==='runner'?'La course sur la banquise':'13 paniers. '+duration/1000+' secondes.';
     if(state!=='playing')$('timer').textContent='00:'+String(duration/1000).padStart(2,'0');
-    $('coverText').textContent='Appuie sur « Tirer ! » : chaque tir compte. Marque 13 paniers en '+duration/1000+' secondes.';
+    $('coverText').textContent=activity==='puzzle'?'Reconstitue le pingouin en 30 secondes. Touche deux pièces pour les échanger.':activity==='runner'?'Cours pendant 30 secondes. Appuie sur « Sauter ! » pour éviter les obstacles.':'Appuie sur « Tirer ! » : chaque tir compte. Marque 13 paniers en '+duration/1000+' secondes.';
   }
-  function accept(d){score=d.score;seq=d.seq;phase=d.phase;target=d.target;epoch=d.startedAt;deadline=d.deadline;setDuration(d.duration||d.deadline-d.startedAt);}
+  function setActivity(value){
+    activity=['puzzle','runner'].includes(value)?value:'basket';goal=activity==='puzzle'?9:activity==='runner'?7:13;
+    document.body.classList.toggle('puzzle-mode',activity==='puzzle');document.body.classList.toggle('runner-mode',activity==='runner');
+    $('court').hidden=activity==='puzzle';$('puzzleBoard').hidden=activity!=='puzzle';$('puzzleModel').hidden=activity!=='puzzle';$('shoot').hidden=activity==='puzzle';
+    $('scoreLabel').textContent=activity==='puzzle'?'PIÈCES':activity==='runner'?'OBSTACLES':'PANIERS';
+    $('gameHint').textContent=activity==='puzzle'?'TOUCHE DEUX PIÈCES POUR LES ÉCHANGER':activity==='runner'?'APPUIE SUR SAUTER AVANT L’OBSTACLE':'APPUIE SUR TIRER POUR MARQUER';
+    $('shoot').textContent=activity==='runner'?'Sauter !':'Tirer !';
+    document.querySelectorAll('.progress i').forEach((d,i)=>d.hidden=i>=goal);
+    if(activity==='puzzle'&&!puzzle){if(!window.WavePuzzle)throw new Error('Recharge la page pour charger le puzzle.');puzzle=window.WavePuzzle.create($('puzzleBoard'),swap);}
+    if(activity==='runner'&&!runner){if(!window.WaveRunner)throw new Error('Recharge la page pour charger la course.');runner=window.WaveRunner.create(ctx);runner.ready.catch(()=>{});}
+  }
+  function accept(d){if(d.activity&&d.activity!==activity)setActivity(d.activity);score=d.score;seq=d.seq;phase=d.phase;target=d.target;epoch=d.startedAt;deadline=d.deadline;if(activity==='puzzle'){board=d.board;puzzle.render(board);}if(activity==='runner')jumps=d.jumps;setDuration(d.duration||d.deadline-d.startedAt);}
   function aim(t){return .5+.44*Math.sin((t-epoch)/GAME.aimSpeed+phase);}
-  function stats(){const s=Math.max(0,Math.ceil((deadline-now())/1000));$('score').textContent=score+' / '+GAME.goal;if(state==='playing'){$('timer').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');if(s>0&&s<=3&&s!==lastCountdown){lastCountdown=s;WaveUI.tone(620,.045,.015);}}$('timerBox').classList.toggle('urgent',state==='playing'&&s<=5);document.querySelectorAll('.progress i').forEach((d,i)=>d.classList.toggle('on',i<score));}
-  function fail(title,text){state='lost';flight=null;pending=false;$('shoot').disabled=true;$('cover').hidden=false;$('coverTitle').textContent=title;$('coverText').textContent=text;$('start').textContent='Réessayer';$('start').disabled=false;}
+  function stats(){const s=Math.max(0,Math.ceil((deadline-now())/1000));$('score').textContent=score+' / '+goal;if(state==='playing'){$('timer').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');if(s>0&&s<=3&&s!==lastCountdown){lastCountdown=s;WaveUI.tone(620,.045,.015);}}$('timerBox').classList.toggle('urgent',state==='playing'&&s<=5);document.querySelectorAll('.progress i').forEach((d,i)=>d.classList.toggle('on',i<score));}
+  function fail(title,text){state='lost';flight=null;pending=false;puzzle?.setEnabled(false);$('shoot').disabled=true;$('cover').hidden=false;$('coverTitle').textContent=title;$('coverText').textContent=text;$('start').textContent='Réessayer';$('start').disabled=false;}
   async function start(){
     if(token&&!resolved){await resolveScan();return;}
     if(!mascotReady||!valid||state==='starting'||state==='playing')return;state='starting';$('start').disabled=true;$('coverText').textContent='Prépare-toi…';
     if(!soundOptOut)WaveUI.enableSound().then(ok=>{if(soundOptOut){WaveUI.disableSound();return;}$('sound').textContent=ok?'Son : activé':'Activer le son';if(!ok)soundOptOut=true;});
     try{
-      if(practice){clockOffset=0;epoch=Date.now();deadline=epoch+duration;phase=Math.random()*6;target=.5;score=0;seq=0;}
+      if(activity==='runner')await runner.ready;
+      if(practice){clockOffset=0;epoch=Date.now();deadline=epoch+duration;phase=Math.random()*6;target=.5;score=0;seq=0;if(activity==='puzzle'){board=window.WavePuzzle.scramble();score=board.filter((p,i)=>p===i).length;puzzle.render(board);}if(activity==='runner')jumps=[];}
       else{const d=await request('/session',token?{token}:{ref});session=d.session;accept(d);}
       flight=null;lastShot=-Infinity;lastCountdown=-1;pending=false;state='playing';$('feedback').textContent='';$('cover').hidden=true;$('shoot').disabled=false;$('start').disabled=false;stats();
+      puzzle?.setEnabled(activity==='puzzle');
     }catch(e){fail('Connexion indisponible',e.message);}
   }
   async function resolveScan(){
@@ -59,7 +73,7 @@
         document.body.classList.remove('game-page');document.body.classList.add('empty-page');
         return;
       }
-      setDuration(d.duration||GAME.duration);
+      setActivity(d.activity);setDuration(d.duration||GAME.duration);
       valid=true;$('gameCard').hidden=false;$('mode').textContent='Un indice se cache ici. Réunis les 3 !';
       $('coverTitle').textContent='À toi de jouer !';
       $('start').textContent='Commencer le défi';$('start').disabled=!mascotReady;state='ready';
@@ -73,7 +87,7 @@
     try{
       const d=await request('/reward',{session});
       if(!/^\d{2}$/.test(d.reward)||!['left','center','right'].includes(d.position))throw new Error('Indice indisponible.');
-      $('reward').textContent=d.reward;$('result').dataset.position='center';
+      $('reward').textContent=d.reward;$('result').dataset.position=d.position;
       $('resultTitle').textContent='TROUVE LE CODE';$('resultText').textContent='Tu as trouvé un indice !';
       const found=window.WaveHunt?.record(d.position)||1;
       $('result').dataset.found=String(found);
@@ -82,7 +96,29 @@
     }
     catch{$('resultText').textContent='Défi réussi, ton indice est conservé quelques minutes.';$('resultNote').textContent='Vérifie ta connexion puis réessaie de l’afficher.';$('retryReward').hidden=false;}
   }
-  async function win(){state='won';document.body.classList.add('game-won');$('shoot').disabled=true;$('play').hidden=true;$('result').hidden=false;$('resultNote').textContent='Ton indice arrive…';WaveUI.win();WaveUI.confetti();if(practice){$('resultText').textContent='Entraînement réussi !';$('resultNote').textContent='L’indice sera révélé ici lorsque le jeu sera activé.';$('result').dataset.position='center';}else await reveal();}
+  async function win(){state='won';puzzle?.setEnabled(false);document.body.classList.add('game-won');$('shoot').disabled=true;$('play').hidden=true;$('result').hidden=false;$('resultNote').textContent='Ton indice arrive…';WaveUI.win();WaveUI.confetti();if(practice){$('resultText').textContent='Entraînement réussi !';$('resultNote').textContent='L’indice sera révélé ici lorsque le jeu sera activé.';$('result').dataset.position='center';}else await reveal();}
+  async function swap(from,to){
+    if(state!=='playing'||pending)return;
+    if(now()>=deadline){fail('Le temps est écoulé !','Retente le puzzle pour découvrir ton indice.');return;}
+    pending=true;
+    try{
+      if(practice){[board[from],board[to]]=[board[to],board[from]];score=board.filter((p,i)=>p===i).length;seq++;puzzle.render(board);}
+      else accept(await request('/puzzle',{session,seq,from,to}));
+      if(state!=='playing')return;pending=false;stats();WaveUI.tone(540,.04,.012);
+      if(score===9)await win();else puzzle.setEnabled(true);
+    }catch(e){fail('Puzzle interrompu',e.message);}
+  }
+  async function jump(){
+    if(state!=='playing'||pending||now()>=deadline)return;
+    const elapsed=now()-epoch;if(jumps.length&&elapsed-jumps.at(-1)<1200)return;
+    jumps.push(elapsed);pending=true;WaveUI.shootSound();
+    try{if(practice)seq++;else accept(await request('/jump',{session,seq}));pending=false;}
+    catch(e){fail('Course interrompue',e.message);}
+  }
+  async function finishRun(){state='finishing';$('shoot').disabled=true;$('timer').textContent='00:00';
+    try{if(!practice)accept(await request('/finish',{session}));await win();}
+    catch(e){fail('Retente la course !',e.message);}
+  }
   async function shoot(){
     if(state!=='playing'||flight||pending||now()-lastShot<GAME.shotCooldown)return;
     if(now()>=deadline){fail('Le temps est écoulé !','Tu as marqué '+score+' panier(s) sur '+GAME.goal+'. Retente le défi !');return;}
@@ -112,6 +148,20 @@
   }
   function frame(t){
     if(state==='empty')return;
+    if(activity!=='basket'){
+      const elapsed=state==='ready'||state==='starting'?0:Math.min(duration,Math.max(0,now()-epoch));
+      if(activity==='runner')runner.draw(elapsed,jumps);
+      if(state==='playing'){
+        if(activity==='runner'){
+          score=window.WaveRunner.obstacles.filter(at=>at<=elapsed).length;
+          if(window.WaveRunner.collision(elapsed,jumps))fail('Obstacle touché !','Appuie sur « Sauter ! » un peu avant l’obstacle. Retente la course !');
+          else if(now()>=deadline&&!pending)finishRun();
+          $('shoot').disabled=pending||(jumps.length>0&&elapsed-jumps.at(-1)<1200)||state!=='playing';
+        }else if(now()>=deadline&&!pending)fail('Le temps est écoulé !','Retente le puzzle pour découvrir ton indice.');
+        stats();
+      }
+      requestAnimationFrame(frame);return;
+    }
     court(t);
     if(state==='playing'){
       if(flight&&t-flight.at>=GAME.flightEnd){const hit=flight.hit;flight=null;$('feedback').textContent=hit?'Panier ! 🏀':'Presque ! Ajuste ton timing.';if(hit)WaveUI.basketSound();else WaveUI.missSound();stats();if(score>=GAME.goal){win();}else{$('shoot').disabled=false;}}
@@ -121,10 +171,10 @@
     const marker=state==='playing'?aim(now()):.3;$('marker').style.left=(marker*100)+'%';$('zone').style.left=((target-GAME.hitRadius)*100)+'%';$('zone').style.width=(GAME.hitRadius*200)+'%';
     requestAnimationFrame(frame);
   }
-  $('start').onclick=start;$('shoot').onclick=shoot;$('retryReward').onclick=reveal;
+  $('start').onclick=start;$('shoot').onclick=()=>activity==='runner'?jump():shoot();$('retryReward').onclick=reveal;
   $('sound').onclick=async()=>{if(!soundOptOut){soundOptOut=true;WaveUI.disableSound();$('sound').textContent='Son : coupé';}else{const enabled=await WaveUI.enableSound();soundOptOut=!enabled;$('sound').textContent=enabled?'Son : activé':'Activer le son';}};
-  document.addEventListener('keydown',e=>{if(e.code==='Space'&&!e.repeat&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&e.target.tagName!=='BUTTON'&&state==='playing'){e.preventDefault();shoot();}});
+  document.addEventListener('keydown',e=>{if(e.code==='Space'&&!e.repeat&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&e.target.tagName!=='BUTTON'&&state==='playing'&&activity!=='puzzle'){e.preventDefault();activity==='runner'?jump():shoot();}});
   requestAnimationFrame(frame);
-  if(!token)setDuration(duration);
+  if(!token){if(practice&&['B','C'].includes(ref))setActivity(ref==='B'?'puzzle':'runner');setDuration(duration);}
   if(token)resolveScan();
 })();

@@ -6,17 +6,63 @@ import vm from 'node:vm';
 function game(search='?id=A',apiUrl='',fetchFn,pathname='/jeu/',tracker){
  const elements=new Map(),dots=Array.from({length:13},()=>({classList:{toggle(){}}}));let time=1900000000000,frame;
  const context2d=new Proxy({createLinearGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:()=>{},set:(o,k,v)=>(o[k]=v,true)});
- const get=id=>{if(!elements.has(id))elements.set(id,{textContent:'',hidden:false,disabled:false,style:{},dataset:{},classList:{toggle(){}},getContext:()=>context2d});return elements.get(id);};
+ const node=()=>({textContent:'',hidden:false,disabled:false,style:{},dataset:{},children:[],classList:{toggle(){}},setAttribute(){},append(child){this.children.push(child);this.firstChild=this.children[0];},replaceChildren(...children){this.children=children;this.firstChild=children[0];},getContext:()=>context2d});
+ const get=id=>{if(!elements.has(id))elements.set(id,node());return elements.get(id);};
  get('result').hidden=true;get('shoot').disabled=true;
  const FakeDate=class extends Date{static now(){return time;}};
  const math=Object.create(Math);math.random=()=>0;
  class LoadedImage{constructor(){this.naturalWidth=1046;this.naturalHeight=1503;}set src(value){this.url=value;this.onload?.();}}
- const sandbox={Image:LoadedImage,document:{getElementById:get,querySelectorAll:()=>dots,addEventListener(){},body:{classList:{remove(){},add(){}}}},location:{search,pathname},window:{WAVE_CONFIG:{apiUrl},WaveHunt:tracker},URLSearchParams,performance:{now:()=>time},Date:FakeDate,Math:math,AbortSignal,fetch:fetchFn,requestAnimationFrame:f=>frame=f,WaveUI:{tone(){},shootSound(){},basketSound(){},missSound(){},isSoundEnabled:()=>true,disableSound(){},win(){},confetti(){},enableSound:async()=>true}};
+ const sandbox={Image:LoadedImage,document:{createElement:node,getElementById:get,querySelectorAll:()=>dots,addEventListener(){},body:{classList:{remove(){},add(){},toggle(){}}}},location:{search,pathname},window:{WAVE_CONFIG:{apiUrl},WaveHunt:tracker},URLSearchParams,performance:{now:()=>time},Date:FakeDate,Math:math,AbortSignal,fetch:fetchFn,requestAnimationFrame:f=>frame=f,WaveUI:{tone(){},shootSound(){},basketSound(){},missSound(){},isSoundEnabled:()=>true,disableSound(){},win(){},confetti(){},enableSound:async()=>true}};
+ for(const name of ['puzzle','runner'])vm.runInNewContext(fs.readFileSync(new URL('../jeu/'+name+'.js',import.meta.url),'utf8'),sandbox);
  vm.runInNewContext(fs.readFileSync(new URL('../jeu/game.js',import.meta.url),'utf8'),sandbox);
  return {get,step(ms){time+=ms;frame(time);},advance(ms){time+=ms;},time:()=>time};
 }
 test('référence absente : pas de démarrage et aucune réponse divulguée',()=>{
  const g=game('');assert.equal(g.get('start').disabled,true);assert.match(g.get('mode').textContent,/Scanne/);assert.equal(g.get('reward').textContent,'');
+});
+
+test('le puzzle mobile B échange deux pièces au toucher et ne révèle son indice qu’une fois complet',async()=>{
+ let board=[1,0,2,3,5,4,7,6,8],seq=0;const calls=[];
+ const fetchFn=async(url,options)=>{
+  const body=JSON.parse(options.body);calls.push({url,body});
+  if(url.endsWith('/resolve'))return Response.json({kind:'game',activity:'puzzle',duration:30000});
+  if(url.endsWith('/reward'))return Response.json({reward:'34',position:'center'});
+  if(url.endsWith('/puzzle')){assert.equal(body.seq,seq);[board[body.from],board[body.to]]=[board[body.to],board[body.from]];seq++;}
+  return Response.json({session:'test',activity:'puzzle',duration:30000,startedAt:1900000000000,deadline:1900000030000,board:[...board],seq,score:board.filter((p,i)=>p===i).length});
+ };
+ const g=game('','https://service.test',fetchFn,'/s/vgyx24v5/');await new Promise(r=>setTimeout(r,0));
+ assert.equal(g.get('shoot').hidden,true);assert.equal(g.get('puzzleBoard').hidden,false);assert.equal(g.get('timer').textContent,'00:30');
+ await g.get('start').onclick();assert.equal(g.get('puzzleBoard').children.length,9);assert.equal(g.get('score').textContent,'3 / 9');
+ for(const [a,b] of [[0,1],[4,5],[6,7]]){await g.get('puzzleBoard').children[a].onclick();await g.get('puzzleBoard').children[b].onclick();g.step(100);}
+ assert.equal(g.get('result').hidden,false);assert.equal(g.get('reward').textContent,'34');assert.equal(g.get('result').dataset.position,'center');
+ assert.equal(calls.filter(c=>c.url.endsWith('/shot')).length,0);assert.equal(calls.filter(c=>c.url.endsWith('/reward')).length,1);
+});
+
+test('le puzzle expiré désactive ses pièces, conserve l’indice caché et autorise un nouvel essai',async()=>{
+ const g=game('?id=B');await g.get('start').onclick();g.step(30000);
+ assert.match(g.get('coverTitle').textContent,/écoulé/);assert.equal(g.get('puzzleBoard').children[0].disabled,true);assert.equal(g.get('reward').textContent,'');
+ await g.get('start').onclick();assert.equal(g.get('puzzleBoard').children[0].disabled,false);assert.equal(g.get('timer').textContent,'00:30');
+});
+
+test('la course C se gagne après trente secondes et sept obstacles évités au bouton Sauter',async()=>{
+ let seq=0,jumps=[],g;const calls=[];const start=1900000000000,obstacles=[4500,8200,11900,15600,19300,23000,26700];
+ const fetchFn=async(url,options)=>{
+  calls.push(url);
+  if(url.endsWith('/resolve'))return Response.json({kind:'game',activity:'runner',duration:30000});
+  if(url.endsWith('/reward'))return Response.json({reward:'56',position:'right'});
+  if(url.endsWith('/jump')){jumps.push(g.time()-start);seq++;}
+  return Response.json({session:'test',activity:'runner',duration:30000,startedAt:start,deadline:start+30000,jumps,obstacles,seq,score:obstacles.filter(at=>at<=g.time()-start).length});
+ };
+ g=game('','https://service.test',fetchFn,'/s/emhvcxu4/');await new Promise(r=>setTimeout(r,0));await g.get('start').onclick();
+ assert.equal(g.get('shoot').textContent,'Sauter !');assert.equal(g.get('timer').textContent,'00:30');
+ for(const at of obstacles){g.advance(start+at-500-g.time());g.step(0);await g.get('shoot').onclick();g.step(500);}
+ assert.equal(g.get('result').hidden,true);g.advance(start+30000-g.time());g.step(0);await new Promise(r=>setTimeout(r,0));
+ assert.equal(g.get('result').hidden,false);assert.equal(g.get('reward').textContent,'56');assert.equal(g.get('result').dataset.position,'right');assert.equal(calls.filter(u=>u.endsWith('/finish')).length,1);
+});
+
+test('un obstacle touché dans la course entraîne une défaite et aucune révélation',async()=>{
+ const g=game('?id=C');await g.get('start').onclick();g.step(4501);
+ assert.match(g.get('coverTitle').textContent,/Obstacle touché/);assert.equal(g.get('shoot').disabled,true);assert.equal(g.get('reward').textContent,'');
 });
 test('mode entraînement : treize paniers en moins de quinze secondes déclenchent la fin sans divulguer un faux indice',async()=>{
  const g=game();await g.get('start').onclick();assert.equal(g.get('cover').hidden,true);assert.match(g.get('mode').textContent,/entraînement/i);
@@ -38,7 +84,7 @@ test('mode connecté : la réponse du serveur décide du score et du résultat',
  const fetchFn=async(url,options)=>{calls.push({url,body:JSON.parse(options.body)});if(url.endsWith('/reward'))return Response.json({reward:'42',position:'right'});const d={session:'test',score:url.endsWith('/session')?0:++seq,seq,phase:0,target:.3,startedAt:1900000000000,deadline:1900000015000,serverNow:serverTime,hit:true};return Response.json(d);};
  const g=game('?id=C','https://service.test',fetchFn);await g.get('start').onclick();assert.equal(calls[0].body.ref,'C');
  for(let n=0;n<13;n++){serverTime=g.time();await g.get('shoot').onclick();g.step(350);g.step(50);}
- await new Promise(r=>setTimeout(r,0));assert.equal(g.get('score').textContent,'13 / 13');assert.equal(g.get('reward').textContent,'42');assert.equal(g.get('result').dataset.position,'center');assert.equal(g.get('resultTitle').textContent,'TROUVE LE CODE');assert.match(g.get('resultProgress').textContent,/réuni 1 indice sur 3/);assert.match(g.get('resultProgress').textContent,/Encore 2/);assert.match(g.get('resultNote').textContent,/capture d’écran/);assert.match(g.get('resultNote').textContent,/prochain QR code/);assert.equal(calls.filter(c=>c.url.endsWith('/reward')).length,1);assert.ok(calls.filter(c=>c.url.endsWith('/shot')).every(c=>!('score' in c.body)));
+ await new Promise(r=>setTimeout(r,0));assert.equal(g.get('score').textContent,'13 / 13');assert.equal(g.get('reward').textContent,'42');assert.equal(g.get('result').dataset.position,'right');assert.equal(g.get('resultTitle').textContent,'TROUVE LE CODE');assert.match(g.get('resultProgress').textContent,/réuni 1 indice sur 3/);assert.match(g.get('resultProgress').textContent,/Encore 2/);assert.match(g.get('resultNote').textContent,/capture d’écran/);assert.match(g.get('resultNote').textContent,/prochain QR code/);assert.equal(calls.filter(c=>c.url.endsWith('/reward')).length,1);assert.ok(calls.filter(c=>c.url.endsWith('/shot')).every(c=>!('score' in c.body)));
 });
 test('un lien neutre attend sa résolution et lance une partie avec son jeton, même si id est modifié',async()=>{
  const calls=[];
