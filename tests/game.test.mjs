@@ -2,8 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import worker,{GameSession} from '../cloudflare/worker.js';
 
-function game(search='?id=A',apiUrl='',fetchFn,pathname='/jeu/',tracker){
+function game(search='?id=A',apiUrl='',fetchFn,pathname='/jeu/',tracker,storage=new Map()){
  const elements=new Map(),dots=Array.from({length:13},()=>({classList:{toggle(){}}}));let time=1900000000000,frame;
  const context2d=new Proxy({createLinearGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:()=>{},set:(o,k,v)=>(o[k]=v,true)});
  const node=()=>({textContent:'',hidden:false,disabled:false,style:{},dataset:{},children:[],classList:{toggle(){}},setAttribute(){},append(child){this.children.push(child);this.firstChild=this.children[0];},replaceChildren(...children){this.children=children;this.firstChild=children[0];},getContext:()=>context2d});
@@ -12,7 +13,7 @@ function game(search='?id=A',apiUrl='',fetchFn,pathname='/jeu/',tracker){
  const FakeDate=class extends Date{static now(){return time;}};
  const math=Object.create(Math);math.random=()=>0;
  class LoadedImage{constructor(){this.naturalWidth=1046;this.naturalHeight=1503;}set src(value){this.url=value;this.onload?.();}}
- const sandbox={Image:LoadedImage,document:{createElement:node,getElementById:get,querySelectorAll:()=>dots,addEventListener(){},body:{classList:{remove(){},add(){},toggle(){}}}},location:{search,pathname},window:{WAVE_CONFIG:{apiUrl},WaveHunt:tracker},URLSearchParams,performance:{now:()=>time},Date:FakeDate,Math:math,AbortSignal,fetch:fetchFn,requestAnimationFrame:f=>frame=f,WaveUI:{tone(){},shootSound(){},basketSound(){},missSound(){},isSoundEnabled:()=>true,disableSound(){},win(){},confetti(){},enableSound:async()=>true}};
+ const sandbox={Image:LoadedImage,document:{createElement:node,getElementById:get,querySelectorAll:()=>dots,addEventListener(){},body:{classList:{remove(){},add(){},toggle(){}}}},location:{search,pathname},window:{WAVE_CONFIG:{apiUrl},WaveHunt:tracker},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},URLSearchParams,performance:{now:()=>time},Date:FakeDate,Math:math,AbortSignal,fetch:fetchFn,requestAnimationFrame:f=>frame=f,WaveUI:{tone(){},shootSound(){},basketSound(){},missSound(){},isSoundEnabled:()=>true,disableSound(){},win(){},confetti(){},enableSound:async()=>true}};
  for(const name of ['puzzle','runner'])vm.runInNewContext(fs.readFileSync(new URL('../jeu/'+name+'.js',import.meta.url),'utf8'),sandbox);
  vm.runInNewContext(fs.readFileSync(new URL('../jeu/game.js',import.meta.url),'utf8'),sandbox);
  return {get,step(ms){time+=ms;frame(time);},advance(ms){time+=ms;},time:()=>time};
@@ -127,4 +128,53 @@ test('un indice est compté après sa révélation réussie, et le troisième te
  await new Promise(r=>setTimeout(r,0));assert.equal(g.get('retryReward').hidden,false);assert.equal(recorded.length,0);
  await g.get('retryReward').onclick();assert.deepEqual(recorded,['right']);assert.equal(g.get('reward').textContent,'42');
  assert.match(g.get('resultNote').textContent,/3 indices.*coffre/);assert.doesNotMatch(g.get('resultNote').textContent,/prochain QR/);assert.equal(g.get('resultProgress').textContent,'Tu as réuni les 3 indices pour trouver le code à 6 chiffres !');
+});
+
+function journeyHarness(){
+ const objects=new Map(),storage=new Map(),origin='https://example.org',env={ALLOWED_ORIGIN:origin,REWARDS_JSON:JSON.stringify({A:'21',B:'34',C:'56'})};let current;
+ env.SESSIONS={idFromName:n=>n,get(id){if(!objects.has(id)){
+  const values=new Map(),ctx={blockConcurrencyWhile:fn=>fn(),storage:{get:async k=>structuredClone(values.get(k)),put:async(k,v)=>values.set(k,structuredClone(v)),delete:async k=>values.delete(k),deleteAll:async()=>values.clear(),setAlarm:async()=>{}}};
+  objects.set(id,new GameSession(ctx,env));
+ }return objects.get(id);}};
+ async function fetchFn(url,options){
+  const original=Date.now;Date.now=()=>current?.time()||1900000000000;
+  try{return await worker.fetch(new Request(url,{...options,headers:{...options.headers,Origin:origin}}),env);}
+  finally{Date.now=original;}
+ }
+ return {storage,open(){const previous=current?.time()||1900000000000;current=game('','https://service.test',fetchFn,'/s/tfn3j5u4/',undefined,storage);current.advance(previous-current.time());return current;},async saved(){const id=storage.get('wave-journey-id-v1');return objects.get('game:'+id).ctx.storage.get('game');}};
+}
+async function settle(){for(let i=0;i<5;i++)await new Promise(r=>setTimeout(r,1));}
+
+test('un seul QR enchaîne le basket, le puzzle et la course avec des vies communes et les trois indices conservés',async()=>{
+ const h=journeyHarness(),g=h.open();await settle();
+ assert.match(g.get('journeyStatus').textContent,/Tentative 1\/2 · Vies 3\/3 · Défi 1\/3/);
+ await g.get('start').onclick();
+ for(let i=0;i<13;i++){await g.get('shoot').onclick();g.step(200);}await settle();
+ assert.equal(g.get('reward').textContent,'21');assert.equal(g.get('nextChallenge').hidden,false);assert.match(g.get('resultNote').textContent,/prochain jeu/);assert.doesNotMatch(g.get('resultNote').textContent,/scanne/);
+ await g.get('nextChallenge').onclick();assert.equal(g.get('challengeTitle').textContent,'Le puzzle du pingouin');assert.equal(g.get('result').hidden,true);
+ await g.get('start').onclick();g.step(30000);await settle();assert.match(g.get('journeyStatus').textContent,/Vies 2\/3 · Défi 2\/3/);
+ await g.get('start').onclick();
+ for(let i=0;i<9;i++){
+  const board=(await h.saved()).board;if(board[i]===i)continue;
+  await g.get('puzzleBoard').children[i].onclick();await g.get('puzzleBoard').children[board.indexOf(i)].onclick();g.step(100);
+ }
+ await settle();assert.equal(g.get('reward').textContent,'34');assert.match(g.get('journeyClues').textContent,/21 · 34/);
+ await g.get('nextChallenge').onclick();await g.get('start').onclick();g.step(4501);await settle();assert.match(g.get('journeyStatus').textContent,/Vies 1\/3 · Défi 3\/3/);
+ await g.get('start').onclick();const run=await h.saved();
+ for(const at of [4500,8200,11900,15600,19300,23000,26700]){g.advance(run.startedAt+at-500-g.time());g.step(0);await g.get('shoot').onclick();g.step(500);}
+ g.advance(run.startedAt+30000-g.time());g.step(0);await settle();
+ assert.equal(g.get('reward').textContent,'56');assert.equal(g.get('journeyVault').hidden,false);assert.equal(g.get('nextChallenge').hidden,true);assert.match(g.get('journeyClues').textContent,/21 · 34 · 56/);
+ const reloaded=h.open();await settle();assert.equal(reloaded.get('journeyVault').hidden,false);assert.match(reloaded.get('journeyStatus').textContent,/Vies 1\/3/);
+});
+
+test('le même navigateur retrouve ses vies, propose une seconde chance puis bloque après deux parcours perdus',async()=>{
+ const h=journeyHarness();let g=h.open();await settle();await g.get('start').onclick();g.step(15000);await settle();
+ assert.match(g.get('journeyStatus').textContent,/Vies 2\/3/);const id=h.storage.get('wave-journey-id-v1');
+ g=h.open();await settle();assert.equal(h.storage.get('wave-journey-id-v1'),id);assert.match(g.get('journeyStatus').textContent,/Vies 2\/3/);
+ for(let n=0;n<2;n++){await g.get('start').onclick();g.step(15000);await settle();}
+ assert.equal(g.get('start').textContent,'Recommencer le parcours');assert.equal(g.get('start').disabled,false);
+ await g.get('start').onclick();assert.match(g.get('journeyStatus').textContent,/Tentative 2\/2 · Vies 3\/3 · Défi 1\/3/);
+ for(let n=0;n<3;n++){await g.get('start').onclick();g.step(15000);await settle();}
+ assert.equal(g.get('start').disabled,true);assert.match(g.get('coverTitle').textContent,/deux tentatives/);
+ g=h.open();await settle();assert.equal(g.get('start').disabled,true);assert.match(g.get('journeyStatus').textContent,/Tentative 2\/2 · Vies 0\/3/);
 });

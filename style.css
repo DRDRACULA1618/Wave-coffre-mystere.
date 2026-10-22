@@ -204,3 +204,16 @@ body.empty-page{height:100vh;height:100dvh;min-height:0;display:flex;align-items
 .puzzle-model img{width:36px;height:46px;object-fit:contain}.puzzle-mode #sound{flex:1}
 .puzzle-mode .feedback{display:none}.runner-mode .arena{background:#dff8ff}
 .runner-mode #shoot{font-size:20px}
+
+.journey-status{flex:0 0 auto;background:#fff;color:var(--ink);border-radius:12px;padding:8px 6px;text-align:center;font-size:12px;font-weight:800;line-height:1.25}
+.journey-mode .hunt-progress{display:none}
+.journey-mode.game-won .result{gap:4px;padding:10px}
+.journey-mode.game-won .result .reward{font-size:clamp(64px,12dvh,96px);line-height:1}
+.journey-mode.game-won .clue-penguins{gap:12px;margin:4px 0}
+.journey-mode.game-won .clue-penguins img{height:clamp(30px,8dvh,64px);width:50px}
+.journey-mode.game-won .result #resultProgress{font-size:clamp(13px,2dvh,16px);margin:4px 0}
+.journey-mode.game-won .result #resultNote{font-size:15px;padding:8px;margin:4px 0}
+.journey-mode .journey-clues{color:var(--ink);font-size:14px;font-weight:800;margin:4px 0}
+.journey-mode #nextChallenge,.journey-mode #journeyVault{width:100%;min-height:44px;padding:10px;font-size:15px;flex:0 0 auto}
+@media(max-height:540px){.journey-status{padding:5px;font-size:10px}.journey-mode.game-won .result{gap:2px;padding:6px}.journey-mode.game-won .result h2{font-size:14px;margin:2px 0}.journey-mode.game-won #resultText{display:none}.journey-mode.game-won .result .reward{font-size:44px}.journey-mode.game-won .clue-penguins img{height:27px;width:28px}.journey-mode.game-won .result #resultProgress{font-size:12px;line-height:1.2;margin:2px 0}.journey-mode.game-won .result #resultNote{font-size:11px;padding:4px;margin:2px 0}.journey-mode .journey-clues{font-size:11px;margin:2px 0}.journey-mode #nextChallenge,.journey-mode #journeyVault{min-height:36px;padding:7px;font-size:13px}.journey-mode .puzzle-model{margin-bottom:3px}.journey-mode .puzzle-model img{height:30px}}
+@media(max-height:420px){.journey-mode.game-won .result h2,.journey-mode.game-won #resultNote{display:none}.journey-mode.game-won .result .reward{font-size:40px}.journey-mode.game-won .result #resultProgress{font-size:11px}.journey-mode.game-won .clue-penguins img{height:24px}}

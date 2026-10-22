@@ -11,6 +11,7 @@
  }
  function count(){return read().size;}
  function render(){
+  if(window.WAVE_JOURNEY_ACTIVE)return;
   const found=count(),remaining=3-found;
   const status=document.getElementById('huntStatus');
   if(status)status.textContent=found===3?'3/3 indices trouvés ! Rejoins le coffre.':found+'/3 '+(found===1?'indice trouvé':'indices trouvés')+' — encore '+remaining+' à trouver.';

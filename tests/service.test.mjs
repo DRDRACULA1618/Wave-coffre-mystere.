@@ -5,7 +5,7 @@ import worker,{ GameSession } from '../cloudflare/worker.js';
 // Réponses fictives : les vrais indices sont exclusivement des secrets Cloudflare.
 const rewards={A:'21',B:'34',C:'56'};
 class MemoryContext {
- constructor(){this.values=new Map();this.storage={get:async k=>structuredClone(this.values.get(k)),put:async(k,v)=>this.values.set(k,structuredClone(v)),setAlarm:async t=>{this.alarm=t;},deleteAll:async()=>this.values.clear()};}
+ constructor(){this.values=new Map();this.storage={get:async k=>structuredClone(this.values.get(k)),put:async(k,v)=>this.values.set(k,structuredClone(v)),delete:async k=>this.values.delete(k),setAlarm:async t=>{this.alarm=t;},deleteAll:async()=>this.values.clear()};}
  blockConcurrencyWhile(fn){return fn();}
 }
 function setup(){const objects=new Map(),env={REWARDS_JSON:JSON.stringify(rewards),ALLOWED_ORIGIN:'https://example.org'};env.SESSIONS={idFromName:n=>n,get(id){if(!objects.has(id))objects.set(id,new GameSession(new MemoryContext(),env));return objects.get(id);}};return {env,objects};}
@@ -80,7 +80,7 @@ test('les nouveaux identifiants et les anciens liens se résolvent sans transmet
  for(const [legacy,token] of Object.entries({A:'tfn3j5u4',B:'vgyx24v5',C:'emhvcxu4',empty:'4ubsj88k'})){
   for(const body of [{token},{legacy}]){
    const r=await api(env,'/resolve',body);assert.equal(r.status,200);
-   assert.deepEqual(await r.json(),legacy==='empty'?{token,kind:'empty'}:{token,kind:'game',duration:{A:15000,B:30000,C:30000}[legacy],activity:{A:'basket',B:'puzzle',C:'runner'}[legacy]});
+   assert.deepEqual(await r.json(),legacy==='empty'?{token,kind:'empty'}:{token,kind:'game',duration:{A:15000,B:30000,C:30000}[legacy],activity:{A:'basket',B:'puzzle',C:'runner'}[legacy],...(legacy==='A'?{journey:true}:{})});
   }
  }
  for(const body of [{token:'toString'},{token:'xxxxxxxx'},{legacy:'toString'},{}])assert.equal((await api(env,'/resolve',body)).status,400);
@@ -176,4 +176,62 @@ test('la référence est imposée par le jeton serveur, et le QR sans indice ne 
   assert.equal((await api(env,'/reward',{session:s.session})).status,403);
  }
  for(const token of ['4ubsj88k','xxxxxxxx','toString'])assert.equal((await api(env,'/session',{token,ref:'A'})).status,400);
+});
+
+test('le parcours unique impose A puis B puis C, conserve les indices et partage les vies entre les défis',async()=>{
+ const {env}=setup(),realNow=Date.now;let time=1900000000000;Date.now=()=>time;
+ try{
+  const opened=await (await api(env,'/journey',{token:'tfn3j5u4'})).json(),session=opened.session;
+  assert.equal(opened.journey.stage,0);assert.equal(opened.journey.lives,3);assert.deepEqual(opened.journey.clues,[]);
+  assert.equal((await api(env,'/journey/next',{session,stage:0})).status,403);
+  let a=await (await api(env,'/journey/start',{session,ref:'C',stage:2})).json();assert.equal(a.activity,'basket');
+  assert.equal((await (await api(env,'/journey/start',{session})).json()).run,a.run);
+  assert.equal((await api(env,'/journey/fail',{session,run:a.run})).status,409);
+  assert.equal((await api(env,'/reward',{session,run:a.run,score:13})).status,403);
+  for(let seq=0;seq<13;seq++){time+=200;assert.equal((await api(env,'/shot',{session,run:a.run,seq})).status,200);}
+  const ra=await (await api(env,'/reward',{session,run:a.run})).json();assert.equal(ra.journey.phase,'revealed');assert.equal(ra.journey.clues.length,1);assert.equal(ra.journey.lives,3);
+  assert.equal((await (await api(env,'/reward',{session,run:a.run})).json()).journey.clues.length,1);
+  const next=await (await api(env,'/journey/next',{session,stage:0})).json();assert.equal(next.journey.stage,1);assert.equal(next.journey.clues[0].reward,rewards.A);
+  assert.equal((await (await api(env,'/journey/next',{session,stage:0})).json()).journey.stage,1);
+  let b=await (await api(env,'/journey/start',{session})).json();assert.equal(b.activity,'puzzle');assert.equal(b.duration,30000);
+  assert.equal((await api(env,'/shot',{session,run:a.run,seq:0})).status,409);
+  time=b.deadline;let loss=await (await api(env,'/journey/fail',{session,run:b.run})).json();assert.equal(loss.journey.lives,2);assert.equal(loss.journey.stage,1);
+  assert.equal((await (await api(env,'/journey/fail',{session,run:b.run})).json()).journey.lives,2);
+  assert.equal((await (await api(env,'/journey',{token:'tfn3j5u4',session})).json()).journey.lives,2);
+  b=await (await api(env,'/journey/start',{session})).json();let board=b.board,seq=0;
+  for(let i=0;i<9;i++)if(board[i]!==i){time+=200;const d=await (await api(env,'/puzzle',{session,run:b.run,seq,from:i,to:board.indexOf(i)})).json();board=d.board;seq=d.seq;}
+  const rb=await (await api(env,'/reward',{session,run:b.run})).json();assert.equal(rb.journey.clues.length,2);assert.equal(rb.journey.lives,2);
+  await api(env,'/journey/next',{session,stage:1});
+  let c=await (await api(env,'/journey/start',{session})).json();time=c.startedAt+4501;
+  loss=await (await api(env,'/journey/fail',{session,run:c.run})).json();assert.equal(loss.journey.lives,1);assert.equal(loss.journey.stage,2);
+  c=await (await api(env,'/journey/start',{session})).json();seq=0;
+  for(const at of c.obstacles){time=c.startedAt+at-500;const d=await (await api(env,'/jump',{session,run:c.run,seq})).json();seq=d.seq;}
+  time=c.deadline;assert.equal((await api(env,'/finish',{session,run:c.run})).status,200);
+  const rc=await (await api(env,'/reward',{session,run:c.run})).json();assert.equal(rc.journey.phase,'complete');assert.equal(rc.journey.lives,1);assert.deepEqual(rc.journey.clues.map(c=>c.reward),[rewards.A,rewards.B,rewards.C]);
+  const resumed=await (await api(env,'/journey',{token:'tfn3j5u4',session})).json();assert.equal(resumed.journey.phase,'complete');assert.equal(resumed.journey.clues.length,3);
+  assert.equal((await api(env,'/journey/start',{session})).status,409);
+ }finally{Date.now=realNow;}
+});
+
+test('trois échecs donnent une seule seconde tentative ; recharger ou doubler un appel ne remet pas les vies à zéro',async()=>{
+ const {env}=setup(),realNow=Date.now;let time=1900000000000;Date.now=()=>time;
+ try{
+  const opened=await (await api(env,'/journey',{token:'tfn3j5u4'})).json(),session=opened.session;
+  for(let attempt=1;attempt<=2;attempt++){
+   for(let n=0;n<3;n++){
+    const s=await (await api(env,'/journey/start',{session})).json();
+    const playing=await (await api(env,'/journey',{session,token:'tfn3j5u4'})).json();assert.equal(playing.run,s.run);assert.equal(playing.deadline,s.deadline);
+    if(attempt===2&&n===0){const replay=await (await api(env,'/journey/restart',{session,attempt:1})).json();assert.equal(replay.run,s.run);assert.equal(replay.journey.phase,'playing');}
+    time=s.deadline;
+    const failed=await (await api(env,'/journey/fail',{session,run:s.run})).json();assert.equal(failed.journey.lives,2-n);assert.equal(failed.journey.attempt,attempt);
+    const replay=await (await api(env,'/journey/fail',{session,run:s.run})).json();assert.equal(replay.journey.lives,2-n);
+   }
+   const stopped=await (await api(env,'/journey',{session,token:'tfn3j5u4'})).json();assert.equal(stopped.journey.phase,attempt===1?'failed':'locked');
+   assert.equal((await api(env,'/journey/start',{session})).status,409);
+   if(attempt===1){const restarted=await (await api(env,'/journey/restart',{session,attempt:1})).json();assert.equal(restarted.journey.attempt,2);assert.equal(restarted.journey.lives,3);assert.equal(restarted.journey.stage,0);assert.deepEqual(restarted.journey.clues,[]);}
+  }
+  assert.equal((await api(env,'/journey/restart',{session,attempt:2})).status,403);
+  const locked=await (await api(env,'/journey',{session,token:'tfn3j5u4'})).json();assert.equal(locked.journey.phase,'locked');assert.equal(locked.journey.lives,0);
+  assert.equal((await api(env,'/journey',{token:'vgyx24v5'})).status,400);
+ }finally{Date.now=realNow;}
 });

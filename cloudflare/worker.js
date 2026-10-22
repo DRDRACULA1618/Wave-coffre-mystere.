@@ -13,6 +13,24 @@ const scanRoutes=Object.freeze({tfn3j5u4:'A',vgyx24v5:'B',emhvcxu4:'C','4ubsj88k
 // Les parties déjà ouvertes avant cette mise à jour gardent leurs quinze secondes.
 const sessionDuration=s=>s.duration??DURATION;
 const snapshot=(s,now)=>({score:s.score,seq:s.seq,phase:s.phase,target:s.target,startedAt:s.startedAt,duration:sessionDuration(s),deadline:s.startedAt+sessionDuration(s),serverNow:now,...(s.activity==='puzzle'?{activity:'puzzle',board:s.board,goal:9}:s.activity==='runner'?{activity:'runner',jumps:s.jumps,obstacles,goal:obstacles.length,completed:s.completed}:{})});
+const refs=['A','B','C'],journeyLifetime=48*3600000;
+const gameWon=s=>s&&(s.activity==='runner'?s.completed===true:s.score>=(s.activity==='puzzle'?9:GOAL));
+function makeGame(ref,now){
+ const s={ref,duration:durations[ref],startedAt:now,score:0,seq:0,phase:Math.random()*Math.PI*2,target:.5,lastShot:0,lastResponse:null};
+ if(ref==='B'){s.activity='puzzle';s.board=puzzleBoard();s.score=puzzleScore(s.board);}
+ if(ref==='C'){s.activity='runner';s.jumps=[];s.completed=false;s.crashed=false;}
+ return s;
+}
+const journeyView=(j,s,now)=>({journey:{stage:j.stage,ref:refs[j.stage],attempt:j.attempt,lives:j.lives,maxAttempts:2,maxLives:3,phase:j.phase,clues:j.clues},serverNow:now,...(j.phase==='playing'&&s?{...snapshot(s,now),activity:s.activity||'basket',run:s.run,won:gameWon(s)}:{})});
+async function normalizeJourney(store,j,now){
+ const s=await store.get('game');
+ if(j.phase==='playing'&&s){
+  if(s.activity==='runner'&&!s.crashed&&now>=s.startedAt+s.duration&&!runnerCrash(s,now)){s.completed=true;await store.put('game',s);}
+  const lost=!gameWon(s)&&(now>=s.startedAt+s.duration||(s.activity==='runner'&&(s.crashed||runnerCrash(s,now))));
+  if(lost&&!s.failed){s.failed=true;j.lives--;j.phase=j.lives>0?'ready':j.attempt===1?'failed':'locked';await store.put('game',s);await store.put('journey',j);}
+ }
+ return s;
+}
 
 export default {
  async fetch(request,env){
@@ -23,7 +41,7 @@ export default {
   const respond=r=>{const h=new Headers(r.headers);Object.entries(headers).forEach(([k,v])=>h.set(k,v));return new Response(r.body,{status:r.status,headers:h});};
   if(request.method!=='POST')return respond(json({error:'Méthode non autorisée.'},405));
   const path=new URL(request.url).pathname;
-  if(!['/resolve','/session','/shot','/puzzle','/jump','/finish','/reward'].includes(path))return respond(json({error:'Adresse inconnue.'},404));
+  if(!['/resolve','/session','/shot','/puzzle','/jump','/finish','/reward','/journey','/journey/start','/journey/fail','/journey/next','/journey/restart'].includes(path))return respond(json({error:'Adresse inconnue.'},404));
   if(!request.headers.get('Content-Type')?.startsWith('application/json'))return respond(json({error:'Format incorrect.'},415));
   if(Number(request.headers.get('Content-Length')||0)>2048)return respond(json({error:'Requête trop grande.'},413));
   try{
@@ -35,10 +53,23 @@ export default {
     if(Object.hasOwn(body,'legacy'))token=Object.keys(scanRoutes).find(k=>scanRoutes[k]===body.legacy);
     if(typeof token!=='string'||!Object.hasOwn(scanRoutes,token))return respond(json({error:'QR code inconnu.'},400));
     const ref=scanRoutes[token];
-    return respond(json(ref==='empty'?{token,kind:'empty'}:{token,kind:'game',duration:durations[ref],activity:activities[ref]}));
+    return respond(json(ref==='empty'?{token,kind:'empty'}:{token,kind:'game',duration:durations[ref],activity:activities[ref],...(ref==='A'?{journey:true}:{})}));
    }
    let rewards;try{rewards=JSON.parse(env.REWARDS_JSON);}catch{return respond(json({error:'Le jeu sera bientôt disponible.'},503));}
    if(!Object.keys(positions).every(k=>/^\d{2}$/.test(rewards?.[k])))return respond(json({error:'Le jeu sera bientôt disponible.'},503));
+   if(path==='/journey'){
+    if(body.token!=='tfn3j5u4')return respond(json({error:'Scanne le QR du parcours.'},400));
+    const existing=Object.hasOwn(body,'session');
+    if(existing&&(typeof body.session!=='string'||!/^[-a-f0-9]{36}$/.test(body.session)))return respond(json({error:'Parcours inconnu.'},400));
+    const session=existing?body.session:crypto.randomUUID(),stub=env.SESSIONS.get(env.SESSIONS.idFromName('game:'+session));
+    if(!existing){
+     const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(request.headers.get('CF-Connecting-IP')||'unknown'));
+     const digest=Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,'0')).join('');
+     const gate=env.SESSIONS.get(env.SESSIONS.idFromName('rate:'+digest)),limit=await gate.fetch(new Request('https://internal/rate',{method:'POST'}));if(!limit.ok)return respond(limit);
+    }
+    const r=await stub.fetch(new Request('https://internal/journey',{method:'POST',body:JSON.stringify({create:!existing})}));
+    return respond(json({...await r.json(),session},r.status));
+   }
    if(path==='/session'){
     const ref=Object.hasOwn(body,'token')?(typeof body.token==='string'&&Object.hasOwn(scanRoutes,body.token)?scanRoutes[body.token]:undefined):body.ref;
     if(!Object.hasOwn(positions,ref))return respond(json({error:'QR code inconnu.'},400));
@@ -74,19 +105,53 @@ export class GameSession {
    rate.count++;await store.put('rate',rate);await store.setAlarm(rate.until);return json({ok:true});
   }
   const body=await request.json();
+  let journey=await store.get('journey');
+  if(path==='/journey'){
+   if(!journey){if(!body.create)return json({error:'Ce parcours a expiré.'},410);journey={stage:0,attempt:1,lives:3,phase:'ready',clues:[]};await store.put('journey',journey);await store.setAlarm(now+journeyLifetime);}
+   const s=await normalizeJourney(store,journey,now);return json(journeyView(journey,s,now));
+  }
+  if(path.startsWith('/journey/')){
+   if(!journey)return json({error:'Parcours inconnu.'},410);
+   let s=await normalizeJourney(store,journey,now);
+   if(path==='/journey/start'){
+    if(journey.phase==='playing')return json(journeyView(journey,s,now));
+    if(journey.phase!=='ready')return json({error:'Ce parcours ne peut pas démarrer.',...journeyView(journey,s,now)},409);
+    s=makeGame(refs[journey.stage],now);s.run=crypto.randomUUID();journey.phase='playing';
+    await store.put('game',s);await store.put('journey',journey);await store.setAlarm(now+journeyLifetime);return json(journeyView(journey,s,now));
+   }
+   if(path==='/journey/fail'){
+    if(!s||body.run!==s.run)return json({error:'Cette manche n’est plus active.',...journeyView(journey,s,now)},409);
+    if(journey.phase==='playing')return json({error:'La manche est toujours en cours.',...journeyView(journey,s,now)},409);
+    return json(journeyView(journey,s,now));
+   }
+   if(path==='/journey/next'){
+    if(Number.isInteger(body.stage)&&journey.stage===body.stage+1)return json(journeyView(journey,s,now));
+    if(journey.phase!=='revealed'||body.stage!==journey.stage||journey.stage>=2)return json({error:'Termine le défi en cours pour continuer.'},403);
+    journey.stage++;journey.phase='ready';await store.put('journey',journey);await store.delete('game');return json(journeyView(journey,null,now));
+   }
+   if(path==='/journey/restart'){
+    if(journey.attempt===2&&body.attempt===1)return json(journeyView(journey,s,now));
+    if(journey.phase!=='failed'||journey.attempt!==1||body.attempt!==1)return json({error:'Les deux tentatives sont utilisées.',...journeyView(journey,s,now)},403);
+    journey={stage:0,attempt:2,lives:3,phase:'ready',clues:[]};await store.put('journey',journey);await store.delete('game');return json(journeyView(journey,null,now));
+   }
+   return json({error:'Adresse inconnue.'},404);
+  }
   if(path==='/start'){
    if(!Object.hasOwn(positions,body.ref))return json({error:'QR code inconnu.'},400);
    if(await store.get('game'))return json({error:'Partie déjà créée.'},409);
-   const s={ref:body.ref,duration:durations[body.ref],startedAt:now,score:0,seq:0,phase:Math.random()*Math.PI*2,target:.5,lastShot:0,lastResponse:null};
-   if(body.ref==='B'){s.activity='puzzle';s.board=puzzleBoard();s.score=puzzleScore(s.board);}
-   if(body.ref==='C'){s.activity='runner';s.jumps=[];s.completed=false;s.crashed=false;}
+   const s=makeGame(body.ref,now);
    await store.put('game',s);await store.setAlarm(now+600000);return json(snapshot(s,now));
   }
-  const s=await store.get('game');if(!s||now>s.startedAt+600000)return json({error:'Cette partie a expiré. Relance le défi.'},410);
+  const s=await store.get('game');if(!s||(!journey&&now>s.startedAt+600000))return json({error:'Cette partie a expiré. Relance le défi.'},410);
+  if(journey&&(body.run!==s.run||!['playing','revealed','complete'].includes(journey.phase)))return json({error:'Cette manche n’est plus active.'},409);
   if(path==='/reward'){
    if(s.activity==='runner'?!s.completed:s.score<(s.activity==='puzzle'?9:GOAL))return json({error:s.activity==='puzzle'?'Reconstitue le pingouin pour obtenir ton indice.':s.activity==='runner'?'Évite les obstacles pendant trente secondes pour obtenir ton indice.':'Marque treize paniers pour obtenir ton indice.'},403);
    let rewards;try{rewards=JSON.parse(this.env.REWARDS_JSON);}catch{return json({error:'Indice indisponible.'},503);}
-   return json({reward:rewards[s.ref],position:positions[s.ref]});
+   if(journey){
+    if(!journey.clues.some(c=>c.position===positions[s.ref]))journey.clues.push({reward:rewards[s.ref],position:positions[s.ref]});
+    journey.phase=journey.stage===2?'complete':'revealed';await store.put('journey',journey);
+   }
+   return json({reward:rewards[s.ref],position:positions[s.ref],...(journey?journeyView(journey,s,now):{})});
   }
   if(path==='/jump'||path==='/finish'){
    if(s.activity!=='runner')return json({error:'Ce défi n’est pas une course.'},400);
