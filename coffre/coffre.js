@@ -2,7 +2,7 @@
  'use strict';
  const $=id=>document.getElementById(id),digits=[...document.querySelectorAll('.digit')],keys=[...document.querySelectorAll('.keys button')];
  // Empreinte locale : cela masque la lecture immédiate mais ne protège pas contre une recherche exhaustive.
- const EXPECTED='44ae8b6a1ce8a8b97b52d683849836403e4374306a3e97bbfe2a06fffe7d67e2';
+ const EXPECTED='d215004affff21e14115de57cb448e77658688a00d68c051d7c58af9036dc69a';
  const MAX_ATTEMPTS=2,STORAGE_KEY='wave-coffre-mystere-round-v1';
  let code='',busy=false,won=false,attempts=0,stopCelebration=null;
  try{const saved=JSON.parse(localStorage.getItem(STORAGE_KEY));if(saved&&Number.isInteger(saved.attempts)&&saved.attempts>=0&&saved.attempts<=MAX_ATTEMPTS){attempts=saved.attempts;won=saved.won===true&&attempts>0;}}catch{}
