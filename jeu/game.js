@@ -74,8 +74,9 @@
       const d=await request('/reward',{session});
       if(!/^\d{2}$/.test(d.reward)||!['left','center','right'].includes(d.position))throw new Error('Indice indisponible.');
       $('reward').textContent=d.reward;$('result').dataset.position='center';
-      $('resultTitle').textContent='Tu as trouvé un indice !';$('resultText').textContent='Ton bloc de 2 chiffres :';
+      $('resultTitle').textContent='TROUVE LE CODE';$('resultText').textContent='Tu as trouvé un indice !';
       const found=window.WaveHunt?.record(d.position)||1;
+      $('result').dataset.found=String(found);
       $('resultProgress').textContent=found===3?'Tu as réuni les 3 indices pour trouver le code à 6 chiffres !':'Tu as réuni '+found+' '+(found===1?'indice':'indices')+' sur 3. Encore '+(3-found)+' '+(found===2?'autre':'autres')+' pour trouver le code à 6 chiffres.';
       $('resultNote').textContent=found===3?'Fais une capture d’écran de cet indice.\nTes 3 indices sont réunis : rejoins le coffre !':'Fais une capture d’écran de cet indice.\nPuis scanne le prochain QR code.';
     }

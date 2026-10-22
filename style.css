@@ -167,3 +167,28 @@ body.empty-page{height:100vh;height:100dvh;min-height:0;display:flex;align-items
  .game-page.game-won .result #resultProgress{font-size:12px}
  .game-page.game-won .result #resultNote{font-size:13px;padding:6px}
 }
+
+/* Les trois PNG représentent le nombre d’indices réunis, jamais leur ordre. */
+.game-page.game-won .result{padding:14px 10px;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly}
+.game-page.game-won .result h2{font-size:18px;letter-spacing:2px;margin:6px 0}
+.game-page.game-won .result .reward{font-size:clamp(84px,20dvh,150px);letter-spacing:-4px}
+.clue-penguins{display:flex;justify-content:center;align-items:center;gap:16px;margin:10px 0;width:100%}
+.clue-penguins img{width:clamp(40px,17vw,72px);height:clamp(44px,12dvh,98px);object-fit:contain;opacity:.18}
+.result[data-found="1"] .clue-penguins img:first-child,
+.result[data-found="2"] .clue-penguins img:nth-child(-n+2),
+.result[data-found="3"] .clue-penguins img{opacity:1}
+.game-page.game-won .result #resultNote{background:var(--pale);width:100%}
+@media(max-height:540px){
+ .game-page.game-won .result{padding:6px 8px;gap:2px}
+ .game-page.game-won .result h2{font-size:15px;margin:2px 0}
+ .game-page.game-won .result .reward{font-size:65px}
+ .clue-penguins{margin:3px 0;gap:12px}.clue-penguins img{height:40px;width:36px}
+ .game-page.game-won .result #resultProgress{font-size:13px;margin:3px 0}
+ .game-page.game-won .result #resultNote{font-size:14px;padding:7px;margin:4px 0}
+}
+@media(max-height:420px){
+ .game-page.game-won .result .reward{font-size:44px}
+ .clue-penguins img{height:27px;width:25px}
+ .game-page.game-won .result #resultProgress{font-size:11px}
+ .game-page.game-won .result #resultNote{font-size:12px;padding:5px}
+}
