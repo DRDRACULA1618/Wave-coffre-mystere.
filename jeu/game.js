@@ -11,7 +11,7 @@
   let activity='basket',goal=13,puzzle=null,board=[],runner=null,jumps=[];
   let state='ready',score=0,phase=0,target=.5,epoch=0,deadline=0,flight=null,lastShot=-Infinity,session='',seq=0,clockOffset=0,pending=false;
   let journey=null,run='',journeyBusy=false;
-  const journeyKey='wave-journey-id-v1',stageActivities=['basket','puzzle','runner'];
+  const journeyKey='wave-journey-id-v1',stageActivities={A:'basket',B:'puzzle',C:'runner'};
   const practice=!api&&!token,now=()=>Date.now()+clockOffset;
   let valid=!token&&['A','B','C'].includes(ref),resolved=!token;
   let soundOptOut=false,lastCountdown=-1;
@@ -38,7 +38,7 @@
     const found=journey.clues.length;
     $('huntStatus').textContent=found===3?'3/3 indices trouvés ! Ouvre le coffre.':found+'/3 indices trouvés · '+(3-found)+' à gagner.';
     $('journeyClues').hidden=found===0;
-    $('journeyClues').textContent='Tes indices : '+['left','center','right'].map(p=>journey.clues.find(c=>c.position===p)?.reward||'— —').join(' · ');
+    $('journeyClues').textContent='Indices trouvés : '+journey.clues.map(c=>c.reward).join(' · ');
   }
   function paintReward(d){
     applyJourney(d);
@@ -47,14 +47,15 @@
     const found=journey?journey.clues.length:window.WaveHunt?.record(d.position)||1;
     $('result').dataset.found=String(found);
     $('resultProgress').textContent=found===3?'Tu as réuni les 3 indices pour trouver le code à 6 chiffres !':'Tu as réuni '+found+' '+(found===1?'indice':'indices')+' sur 3. Encore '+(3-found)+' '+(found===2?'autre':'autres')+' pour trouver le code à 6 chiffres.';
-    $('resultNote').textContent=journey?(found===3?'Tes 3 indices sont réunis !\nTu peux maintenant ouvrir le coffre.':'Fais une capture d’écran de cet indice.\nPuis continue vers le prochain jeu.'):(found===3?'Fais une capture d’écran de cet indice.\nTes 3 indices sont réunis : rejoins le coffre !':'Fais une capture d’écran de cet indice.\nPuis scanne le prochain QR code.');
+    $('resultNote').textContent=journey?(found===3?'Remets tes 3 indices dans le bon ordre.\nPuis ouvre le coffre.':'Fais une capture d’écran de cet indice.\nPuis continue vers le prochain jeu.'):(found===3?'Fais une capture d’écran de cet indice.\nTes 3 indices sont réunis : rejoins le coffre !':'Fais une capture d’écran de cet indice.\nPuis scanne le prochain QR code.');
     $('nextChallenge').hidden=!journey||journey.phase==='complete';
-    $('nextChallenge').textContent=journey?.stage===0?'Continuer vers le puzzle':'Continuer vers la course';
+    const nextRef=journey?(journey.order||['A','B','C'])[journey.stage+1]:null;
+    $('nextChallenge').textContent='Continuer vers '+({A:'le basket',B:'le puzzle',C:'la course'}[nextRef]||'le prochain jeu');
     $('journeyVault').hidden=!journey||journey.phase!=='complete';
   }
   function prepareJourney(d){
     applyJourney(d);state='ready';flight=null;pending=false;score=0;seq=0;puzzle?.setEnabled(false);
-    setActivity(stageActivities[journey.stage]);setDuration(({A:15000,B:30000,C:30000})[journey.ref]);
+    setActivity(stageActivities[journey.ref]);setDuration(({A:15000,B:30000,C:30000})[journey.ref]);
     stats();
     $('loadingCard').hidden=true;$('gameCard').hidden=false;$('emptyCard').hidden=true;
     $('mode').textContent='Défi '+(journey.stage+1)+' sur 3 · 3 vies partagées entre les jeux';
@@ -63,7 +64,7 @@
     $('reward').textContent='';$('result').dataset.position='';
     if(['revealed','complete'].includes(journey.phase)){
       state='won';document.body.classList.add('game-won');$('play').hidden=true;$('result').hidden=false;
-      const clue=journey.clues.find(c=>c.position===['left','center','right'][journey.stage]);
+      const clue=journey.clues.find(c=>c.position===({A:'left',B:'center',C:'right'})[journey.ref]);
       if(clue)paintReward(clue);return;
     }
     $('coverTitle').textContent=journey.phase==='locked'?'Tes deux tentatives sont terminées':journey.phase==='failed'?'Tu as utilisé tes 3 vies':'À toi de jouer !';

@@ -13,7 +13,8 @@ const scanRoutes=Object.freeze({tfn3j5u4:'A',vgyx24v5:'B',emhvcxu4:'C','4ubsj88k
 // Les parties déjà ouvertes avant cette mise à jour gardent leurs quinze secondes.
 const sessionDuration=s=>s.duration??DURATION;
 const snapshot=(s,now)=>({score:s.score,seq:s.seq,phase:s.phase,target:s.target,startedAt:s.startedAt,duration:sessionDuration(s),deadline:s.startedAt+sessionDuration(s),serverNow:now,...(s.activity==='puzzle'?{activity:'puzzle',board:s.board,goal:9}:s.activity==='runner'?{activity:'runner',jumps:s.jumps,obstacles,goal:obstacles.length,completed:s.completed}:{})});
-const refs=['A','B','C'],journeyLifetime=48*3600000;
+const refs=['B','C','A'],legacyRefs=['A','B','C'],journeyLifetime=48*3600000;
+const journeyOrder=j=>j.order||legacyRefs;
 const gameWon=s=>s&&(s.activity==='runner'?s.completed===true:s.score>=(s.activity==='puzzle'?9:GOAL));
 function makeGame(ref,now){
  const s={ref,duration:durations[ref],startedAt:now,score:0,seq:0,phase:Math.random()*Math.PI*2,target:.5,lastShot:0,lastResponse:null};
@@ -21,7 +22,7 @@ function makeGame(ref,now){
  if(ref==='C'){s.activity='runner';s.jumps=[];s.completed=false;s.crashed=false;}
  return s;
 }
-const journeyView=(j,s,now)=>({journey:{stage:j.stage,ref:refs[j.stage],attempt:j.attempt,lives:j.lives,maxAttempts:2,maxLives:3,phase:j.phase,clues:j.clues},serverNow:now,...(j.phase==='playing'&&s?{...snapshot(s,now),activity:s.activity||'basket',run:s.run,won:gameWon(s)}:{})});
+const journeyView=(j,s,now)=>({journey:{stage:j.stage,ref:journeyOrder(j)[j.stage],order:journeyOrder(j),attempt:j.attempt,lives:j.lives,maxAttempts:2,maxLives:3,phase:j.phase,clues:j.clues},serverNow:now,...(j.phase==='playing'&&s?{...snapshot(s,now),activity:s.activity||'basket',run:s.run,won:gameWon(s)}:{})});
 async function normalizeJourney(store,j,now){
  const s=await store.get('game');
  if(j.phase==='playing'&&s){
@@ -53,7 +54,8 @@ export default {
     if(Object.hasOwn(body,'legacy'))token=Object.keys(scanRoutes).find(k=>scanRoutes[k]===body.legacy);
     if(typeof token!=='string'||!Object.hasOwn(scanRoutes,token))return respond(json({error:'QR code inconnu.'},400));
     const ref=scanRoutes[token];
-    return respond(json(ref==='empty'?{token,kind:'empty'}:{token,kind:'game',duration:durations[ref],activity:activities[ref],...(ref==='A'?{journey:true}:{})}));
+    const firstRef=ref==='A'?refs[0]:ref;
+    return respond(json(ref==='empty'?{token,kind:'empty'}:{token,kind:'game',duration:durations[firstRef],activity:activities[firstRef],...(ref==='A'?{journey:true}:{})}));
    }
    let rewards;try{rewards=JSON.parse(env.REWARDS_JSON);}catch{return respond(json({error:'Le jeu sera bientôt disponible.'},503));}
    if(!Object.keys(positions).every(k=>/^\d{2}$/.test(rewards?.[k])))return respond(json({error:'Le jeu sera bientôt disponible.'},503));
@@ -107,7 +109,8 @@ export class GameSession {
   const body=await request.json();
   let journey=await store.get('journey');
   if(path==='/journey'){
-   if(!journey){if(!body.create)return json({error:'Ce parcours a expiré.'},410);journey={stage:0,attempt:1,lives:3,phase:'ready',clues:[]};await store.put('journey',journey);await store.setAlarm(now+journeyLifetime);}
+   if(!journey){if(!body.create)return json({error:'Ce parcours a expiré.'},410);journey={stage:0,order:[...refs],attempt:1,lives:3,phase:'ready',clues:[]};await store.put('journey',journey);await store.setAlarm(now+journeyLifetime);}
+   else if(!journey.order){journey.order=journey.stage===0&&journey.phase==='ready'&&journey.clues.length===0?[...refs]:[...legacyRefs];await store.put('journey',journey);}
    const s=await normalizeJourney(store,journey,now);return json(journeyView(journey,s,now));
   }
   if(path.startsWith('/journey/')){
@@ -116,7 +119,7 @@ export class GameSession {
    if(path==='/journey/start'){
     if(journey.phase==='playing')return json(journeyView(journey,s,now));
     if(journey.phase!=='ready')return json({error:'Ce parcours ne peut pas démarrer.',...journeyView(journey,s,now)},409);
-    s=makeGame(refs[journey.stage],now);s.run=crypto.randomUUID();journey.phase='playing';
+    s=makeGame(journeyOrder(journey)[journey.stage],now);s.run=crypto.randomUUID();journey.phase='playing';
     await store.put('game',s);await store.put('journey',journey);await store.setAlarm(now+journeyLifetime);return json(journeyView(journey,s,now));
    }
    if(path==='/journey/fail'){
@@ -132,7 +135,7 @@ export class GameSession {
    if(path==='/journey/restart'){
     if(journey.attempt===2&&body.attempt===1)return json(journeyView(journey,s,now));
     if(journey.phase!=='failed'||journey.attempt!==1||body.attempt!==1)return json({error:'Les deux tentatives sont utilisées.',...journeyView(journey,s,now)},403);
-    journey={stage:0,attempt:2,lives:3,phase:'ready',clues:[]};await store.put('journey',journey);await store.delete('game');return json(journeyView(journey,null,now));
+    journey={stage:0,order:[...refs],attempt:2,lives:3,phase:'ready',clues:[]};await store.put('journey',journey);await store.delete('game');return json(journeyView(journey,null,now));
    }
    return json({error:'Adresse inconnue.'},404);
   }

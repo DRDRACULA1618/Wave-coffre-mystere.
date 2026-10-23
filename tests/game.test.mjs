@@ -130,10 +130,11 @@ test('un indice est compté après sa révélation réussie, et le troisième te
  assert.match(g.get('resultNote').textContent,/3 indices.*coffre/);assert.doesNotMatch(g.get('resultNote').textContent,/prochain QR/);assert.equal(g.get('resultProgress').textContent,'Tu as réuni les 3 indices pour trouver le code à 6 chiffres !');
 });
 
-function journeyHarness(){
+function journeyHarness(initialOrder){
  const objects=new Map(),storage=new Map(),origin='https://example.org',env={ALLOWED_ORIGIN:origin,REWARDS_JSON:JSON.stringify({A:'21',B:'34',C:'56'})};let current;
  env.SESSIONS={idFromName:n=>n,get(id){if(!objects.has(id)){
   const values=new Map(),ctx={blockConcurrencyWhile:fn=>fn(),storage:{get:async k=>structuredClone(values.get(k)),put:async(k,v)=>values.set(k,structuredClone(v)),delete:async k=>values.delete(k),deleteAll:async()=>values.clear(),setAlarm:async()=>{}}};
+  if(initialOrder&&id.startsWith('game:'))values.set('journey',{stage:0,attempt:1,lives:3,phase:'ready',clues:[],order:initialOrder});
   objects.set(id,new GameSession(ctx,env));
  }return objects.get(id);}};
  async function fetchFn(url,options){
@@ -145,8 +146,8 @@ function journeyHarness(){
 }
 async function settle(){for(let i=0;i<5;i++)await new Promise(r=>setTimeout(r,1));}
 
-test('un seul QR enchaîne le basket, le puzzle et la course avec des vies communes et les trois indices conservés',async()=>{
- const h=journeyHarness(),g=h.open();await settle();
+test('un ancien parcours A-B-C reprend avec ses vies communes et ses trois indices conservés',async()=>{
+ const h=journeyHarness(['A','B','C']),g=h.open();await settle();
  assert.match(g.get('journeyStatus').textContent,/Tentative 1\/2 · Vies 3\/3 · Défi 1\/3/);
  await g.get('start').onclick();
  for(let i=0;i<13;i++){await g.get('shoot').onclick();g.step(200);}await settle();
@@ -168,13 +169,33 @@ test('un seul QR enchaîne le basket, le puzzle et la course avec des vies commu
 });
 
 test('le même navigateur retrouve ses vies, propose une seconde chance puis bloque après deux parcours perdus',async()=>{
- const h=journeyHarness();let g=h.open();await settle();await g.get('start').onclick();g.step(15000);await settle();
+ const h=journeyHarness();let g=h.open();await settle();await g.get('start').onclick();g.step(30000);await settle();
  assert.match(g.get('journeyStatus').textContent,/Vies 2\/3/);const id=h.storage.get('wave-journey-id-v1');
  g=h.open();await settle();assert.equal(h.storage.get('wave-journey-id-v1'),id);assert.match(g.get('journeyStatus').textContent,/Vies 2\/3/);
- for(let n=0;n<2;n++){await g.get('start').onclick();g.step(15000);await settle();}
+ for(let n=0;n<2;n++){await g.get('start').onclick();g.step(30000);await settle();}
  assert.equal(g.get('start').textContent,'Recommencer le parcours');assert.equal(g.get('start').disabled,false);
  await g.get('start').onclick();assert.match(g.get('journeyStatus').textContent,/Tentative 2\/2 · Vies 3\/3 · Défi 1\/3/);
- for(let n=0;n<3;n++){await g.get('start').onclick();g.step(15000);await settle();}
+ for(let n=0;n<3;n++){await g.get('start').onclick();g.step(30000);await settle();}
  assert.equal(g.get('start').disabled,true);assert.match(g.get('coverTitle').textContent,/deux tentatives/);
  g=h.open();await settle();assert.equal(g.get('start').disabled,true);assert.match(g.get('journeyStatus').textContent,/Tentative 2\/2 · Vies 0\/3/);
+});
+
+test('les nouveaux parcours enchaînent puzzle-course-basket et affichent les indices dans leur ordre de découverte',async()=>{
+ const h=journeyHarness();let g=h.open();await settle();
+ assert.equal(g.get('challengeTitle').textContent,'Le puzzle du pingouin');assert.equal(g.get('timer').textContent,'00:30');
+ await g.get('start').onclick();
+ for(let i=0;i<9;i++){
+  const board=(await h.saved()).board;if(board[i]===i)continue;
+  await g.get('puzzleBoard').children[i].onclick();await g.get('puzzleBoard').children[board.indexOf(i)].onclick();g.step(100);
+ }
+ await settle();assert.equal(g.get('reward').textContent,'34');assert.equal(g.get('result').dataset.position,'center');assert.equal(g.get('nextChallenge').textContent,'Continuer vers la course');assert.equal(g.get('journeyClues').textContent,'Indices trouvés : 34');
+ g=h.open();await settle();assert.equal(g.get('reward').textContent,'34');assert.equal(g.get('result').dataset.position,'center');
+ await g.get('nextChallenge').onclick();assert.equal(g.get('challengeTitle').textContent,'La course sur la banquise');await g.get('start').onclick();const run=await h.saved();
+ for(const at of [4500,8200,11900,15600,19300,23000,26700]){g.advance(run.startedAt+at-500-g.time());g.step(0);await g.get('shoot').onclick();g.step(500);}
+ g.advance(run.startedAt+30000-g.time());g.step(0);await settle();
+ assert.equal(g.get('reward').textContent,'56');assert.equal(g.get('nextChallenge').textContent,'Continuer vers le basket');assert.equal(g.get('result').dataset.position,'right');
+ await g.get('nextChallenge').onclick();assert.match(g.get('challengeTitle').textContent,/13 paniers/);await g.get('start').onclick();
+ for(let i=0;i<13;i++){await g.get('shoot').onclick();g.step(200);}await settle();
+ assert.equal(g.get('reward').textContent,'21');assert.equal(g.get('result').dataset.position,'left');assert.equal(g.get('journeyClues').textContent,'Indices trouvés : 34 · 56 · 21');assert.match(g.get('resultNote').textContent,/bon ordre/);assert.equal(g.get('journeyVault').hidden,false);
+ g=h.open();await settle();assert.equal(g.get('reward').textContent,'21');assert.equal(g.get('result').dataset.position,'left');assert.equal(g.get('journeyClues').textContent,'Indices trouvés : 34 · 56 · 21');
 });

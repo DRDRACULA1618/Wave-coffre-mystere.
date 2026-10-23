@@ -80,7 +80,8 @@ test('les nouveaux identifiants et les anciens liens se résolvent sans transmet
  for(const [legacy,token] of Object.entries({A:'tfn3j5u4',B:'vgyx24v5',C:'emhvcxu4',empty:'4ubsj88k'})){
   for(const body of [{token},{legacy}]){
    const r=await api(env,'/resolve',body);assert.equal(r.status,200);
-   assert.deepEqual(await r.json(),legacy==='empty'?{token,kind:'empty'}:{token,kind:'game',duration:{A:15000,B:30000,C:30000}[legacy],activity:{A:'basket',B:'puzzle',C:'runner'}[legacy],...(legacy==='A'?{journey:true}:{})});
+   const first=legacy==='A'?'B':legacy;
+   assert.deepEqual(await r.json(),legacy==='empty'?{token,kind:'empty'}:{token,kind:'game',duration:{A:15000,B:30000,C:30000}[first],activity:{A:'basket',B:'puzzle',C:'runner'}[first],...(legacy==='A'?{journey:true}:{})});
   }
  }
  for(const body of [{token:'toString'},{token:'xxxxxxxx'},{legacy:'toString'},{}])assert.equal((await api(env,'/resolve',body)).status,400);
@@ -178,10 +179,11 @@ test('la référence est imposée par le jeton serveur, et le QR sans indice ne 
  for(const token of ['4ubsj88k','xxxxxxxx','toString'])assert.equal((await api(env,'/session',{token,ref:'A'})).status,400);
 });
 
-test('le parcours unique impose A puis B puis C, conserve les indices et partage les vies entre les défis',async()=>{
- const {env}=setup(),realNow=Date.now;let time=1900000000000;Date.now=()=>time;
+test('un ancien parcours conserve son ordre A-B-C, ses indices et ses vies partagées',async()=>{
+ const {env,objects}=setup(),realNow=Date.now;let time=1900000000000;Date.now=()=>time;
  try{
   const opened=await (await api(env,'/journey',{token:'tfn3j5u4'})).json(),session=opened.session;
+  const store=objects.get('game:'+session).ctx.storage,old=await store.get('journey');old.order=['A','B','C'];await store.put('journey',old);
   assert.equal(opened.journey.stage,0);assert.equal(opened.journey.lives,3);assert.deepEqual(opened.journey.clues,[]);
   assert.equal((await api(env,'/journey/next',{session,stage:0})).status,403);
   let a=await (await api(env,'/journey/start',{session,ref:'C',stage:2})).json();assert.equal(a.activity,'basket');
@@ -234,4 +236,16 @@ test('trois échecs donnent une seule seconde tentative ; recharger ou doubler u
   const locked=await (await api(env,'/journey',{session,token:'tfn3j5u4'})).json();assert.equal(locked.journey.phase,'locked');assert.equal(locked.journey.lives,0);
   assert.equal((await api(env,'/journey',{token:'vgyx24v5'})).status,400);
  }finally{Date.now=realNow;}
+});
+
+test('la migration de l’ordre préserve les manches déjà commencées et ne réinitialise ni les vies ni les tentatives',async()=>{
+ const {env,objects}=setup();
+ const opened=await (await api(env,'/journey',{token:'tfn3j5u4'})).json(),session=opened.session,store=objects.get('game:'+session).ctx.storage;
+ const old=await store.get('journey');delete old.order;old.attempt=2;old.lives=2;await store.put('journey',old);
+ const ready=await (await api(env,'/journey',{session,token:'tfn3j5u4'})).json();
+ assert.deepEqual(ready.journey.order,['B','C','A']);assert.equal(ready.journey.ref,'B');assert.equal(ready.journey.attempt,2);assert.equal(ready.journey.lives,2);
+ const a=await (await api(env,'/session',{ref:'A'})).json(),saved=await objects.get('game:'+a.session).ctx.storage.get('game');saved.run=crypto.randomUUID();
+ const playing={stage:0,attempt:1,lives:2,phase:'playing',clues:[]};await store.put('journey',playing);await store.put('game',saved);
+ const resumed=await (await api(env,'/journey',{session,token:'tfn3j5u4'})).json();
+ assert.deepEqual(resumed.journey.order,['A','B','C']);assert.equal(resumed.journey.ref,'A');assert.equal(resumed.run,saved.run);assert.equal(resumed.deadline,a.deadline);assert.equal(resumed.journey.lives,2);
 });
